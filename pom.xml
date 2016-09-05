@@ -102,7 +102,7 @@ THE SOFTWARE.
     <findbugs-maven-plugin.version>3.0.1</findbugs-maven-plugin.version>
     <test-annotations.version>1.2</test-annotations.version>
 
-    <java.level>6</java.level>
+    <java.level>7</java.level>
     <cloudbeesInternalDistMgmtSnapshotsUrl>https://nexus-internal.cloudbees.com/content/repositories/snapshots</cloudbeesInternalDistMgmtSnapshotsUrl>
     <cloudbeesInternalDistMgmtReleasesUrl>https://nexus-internal.cloudbees.com/service/local/staging/deploy/maven2</cloudbeesInternalDistMgmtReleasesUrl>
   </properties>
