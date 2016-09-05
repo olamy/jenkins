@@ -1,18 +1,18 @@
 /*
  * The MIT License
- * 
+ *
  * Copyright (c) 2004-2010, Sun Microsystems, Inc., Kohsuke Kawaguchi, David Calavera, Seiji Sogabe
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -52,6 +52,7 @@ import org.acegisecurity.providers.encoding.PasswordEncoder;
 import org.acegisecurity.providers.encoding.ShaPasswordEncoder;
 import org.acegisecurity.userdetails.UserDetails;
 import org.acegisecurity.userdetails.UsernameNotFoundException;
+import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.ForwardToView;
 import org.kohsuke.stapler.HttpResponse;
@@ -79,7 +80,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
@@ -97,7 +97,7 @@ public class HudsonPrivateSecurityRealm extends AbstractPasswordBasedSecurityRea
     /**
      * If true, sign up is not allowed.
      * <p>
-     * This is a negative switch so that the default value 'false' remains compatible with older installations. 
+     * This is a negative switch so that the default value 'false' remains compatible with older installations.
      */
     private final boolean disableSignup;
 
@@ -260,16 +260,26 @@ public class HudsonPrivateSecurityRealm extends AbstractPasswordBasedSecurityRea
     }
 
     /**
-     * Creates an user account. Used by admins.
+     * Creates a user account. Used by admins.
      *
      * This version behaves differently from {@link #doCreateAccount(StaplerRequest, StaplerResponse)} in that
      * this is someone creating another user.
      */
     public void doCreateAccountByAdmin(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException {
+        createAccountByAdmin(req, rsp, "addUser.jelly", "."); // send the user back to the listing page on success
+    }
+
+    /**
+     * Creates a user account. Requires {@link Jenkins#ADMINISTER}
+     */
+    @Restricted(NoExternalUse.class)
+    public User createAccountByAdmin(StaplerRequest req, StaplerResponse rsp, String addUserView, String successView) throws IOException, ServletException {
         checkPermission(Jenkins.ADMINISTER);
-        if(createAccount(req, rsp, false, "addUser.jelly")!=null) {
-            rsp.sendRedirect(".");  // send the user back to the listing page
+        User u = createAccount(req, rsp, false, addUserView);
+        if(u != null) {
+            rsp.sendRedirect(successView);
         }
+        return u;
     }
 
     /**
@@ -335,7 +345,7 @@ public class HudsonPrivateSecurityRealm extends AbstractPasswordBasedSecurityRea
         if(si.fullname==null || si.fullname.length()==0)
             si.fullname = si.username;
 
-        if(si.email==null || !si.email.contains("@"))
+        if(isMailerPluginPresent() && (si.email==null || !si.email.contains("@")))
             si.errorMessage = Messages.HudsonPrivateSecurityRealm_CreateAccount_InvalidEmailAddress();
 
         if (! User.isIdOrFullnameAllowed(si.username)) {
@@ -356,18 +366,29 @@ public class HudsonPrivateSecurityRealm extends AbstractPasswordBasedSecurityRea
         // register the user
         User user = createAccount(si.username,si.password1);
         user.setFullName(si.fullname);
-        try {
-            // legacy hack. mail support has moved out to a separate plugin
-            Class<?> up = Jenkins.getInstance().pluginManager.uberClassLoader.loadClass("hudson.tasks.Mailer$UserProperty");
-            Constructor<?> c = up.getDeclaredConstructor(String.class);
-            user.addProperty((UserProperty)c.newInstance(si.email));
-        } catch (RuntimeException e) {
-            throw e;
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Failed to set the e-mail address",e);
+        if(isMailerPluginPresent()) {
+            try {
+                // legacy hack. mail support has moved out to a separate plugin
+                Class<?> up = Jenkins.getInstance().pluginManager.uberClassLoader.loadClass("hudson.tasks.Mailer$UserProperty");
+                Constructor<?> c = up.getDeclaredConstructor(String.class);
+                user.addProperty((UserProperty)c.newInstance(si.email));
+            } catch (ReflectiveOperationException e) {
+                throw new RuntimeException(e);
+            }
         }
         user.save();
         return user;
+    }
+    
+    @Restricted(NoExternalUse.class)
+    public boolean isMailerPluginPresent() {
+        try {
+            // mail support has moved to a separate plugin
+            return null != Jenkins.getInstance().pluginManager.uberClassLoader.loadClass("hudson.tasks.Mailer$UserProperty");
+        } catch (ClassNotFoundException e) {
+            LOGGER.finer("Mailer plugin not present");
+        }
+        return false;
     }
 
     /**
@@ -540,7 +561,7 @@ public class HudsonPrivateSecurityRealm extends AbstractPasswordBasedSecurityRea
             }
         }
 
-        @Extension
+        @Extension @Symbol("password")
         public static final class DescriptorImpl extends UserPropertyDescriptor {
             @Override
             public String getDisplayName() {
@@ -580,7 +601,7 @@ public class HudsonPrivateSecurityRealm extends AbstractPasswordBasedSecurityRea
      * Displays "manage users" link in the system config if {@link HudsonPrivateSecurityRealm}
      * is in effect.
      */
-    @Extension
+    @Extension @Symbol("localUsers")
     public static final class ManageUserLinks extends ManagementLink {
         public String getIconFileName() {
             if(Jenkins.getInstance().getSecurityRealm() instanceof HudsonPrivateSecurityRealm)
@@ -691,7 +712,7 @@ public class HudsonPrivateSecurityRealm extends AbstractPasswordBasedSecurityRea
         private static final String JBCRYPT_HEADER = "#jbcrypt:";
     };
 
-    @Extension
+    @Extension @Symbol("local")
     public static final class DescriptorImpl extends Descriptor<SecurityRealm> {
         public String getDisplayName() {
             return Messages.HudsonPrivateSecurityRealm_DisplayName();

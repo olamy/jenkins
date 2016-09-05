@@ -2,6 +2,7 @@ package hudson.cli;
 
 import hudson.Extension;
 import jenkins.model.Jenkins;
+import org.jenkinsci.Symbol;
 import org.jenkinsci.remoting.nio.NioChannelHub;
 
 import javax.crypto.SecretKey;
@@ -20,7 +21,7 @@ import java.security.Signature;
  * @author Kohsuke Kawaguchi
  * @since 1.467
  */
-@Extension
+@Extension @Symbol("cli2")
 public class CliProtocol2 extends CliProtocol {
     @Override
     public String getName() {
@@ -69,13 +70,7 @@ public class CliProtocol2 extends CliProtocol {
                     signer.initSign(instanceId);
                     signer.update(secret);
                     c.writeByteArray(signer.sign());
-                } catch (ClassNotFoundException e) {
-                    throw new Error(e);
-                } catch (IllegalAccessException e) {
-                    throw new Error(e);
-                } catch (InvocationTargetException e) {
-                    throw new Error(e);
-                } catch (NoSuchMethodException e) {
+                } catch (ClassNotFoundException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
                     throw new Error(e);
                 }
 

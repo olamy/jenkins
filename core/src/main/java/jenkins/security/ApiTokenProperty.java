@@ -24,6 +24,7 @@
 package jenkins.security;
 
 import hudson.Extension;
+import jenkins.util.SystemProperties;
 import hudson.Util;
 import hudson.model.Descriptor.FormException;
 import hudson.model.User;
@@ -34,6 +35,7 @@ import hudson.util.HttpResponses;
 import hudson.util.Secret;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
+import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.HttpResponse;
@@ -67,7 +69,7 @@ public class ApiTokenProperty extends UserProperty {
      * @since TODO
      */
     private static final boolean SHOW_TOKEN_TO_ADMINS = 
-            Boolean.getBoolean(ApiTokenProperty.class.getName() + ".showTokenToAdmins");
+            SystemProperties.getBoolean(ApiTokenProperty.class.getName() + ".showTokenToAdmins");
     
     
     @DataBoundConstructor
@@ -119,10 +121,7 @@ public class ApiTokenProperty extends UserProperty {
     
     private boolean hasPermissionToSeeToken() {
         final Jenkins jenkins = Jenkins.getInstance();
-        if (jenkins == null) {
-            return false; // Should not happen - we don't display UIs in this stage
-        }
-        
+
         // Administrators can do whatever they want
         if (SHOW_TOKEN_TO_ADMINS && jenkins.hasPermission(Jenkins.ADMINISTER)) {
             return true;
@@ -161,7 +160,7 @@ public class ApiTokenProperty extends UserProperty {
         return this;
     }
 
-    @Extension
+    @Extension @Symbol("apiToken")
     public static final class DescriptorImpl extends UserPropertyDescriptor {
         public String getDisplayName() {
             return Messages.ApiTokenProperty_DisplayName();

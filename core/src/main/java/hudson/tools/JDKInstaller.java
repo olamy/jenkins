@@ -52,6 +52,7 @@ import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.httpclient.protocol.Protocol;
 import org.apache.commons.io.IOUtils;
+import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.HttpResponse;
 import org.kohsuke.stapler.QueryParameter;
@@ -448,8 +449,7 @@ public class JDKInstaller extends ToolInstaller {
 
         HttpClient hc = new HttpClient();
         hc.getParams().setParameter("http.useragent","Mozilla/5.0 (Windows; U; MSIE 9.0; Windows NT 9.0; en-US)");
-        Jenkins j = Jenkins.getInstance();
-        ProxyConfiguration jpc = j!=null ? j.proxy : null;
+        ProxyConfiguration jpc = Jenkins.getInstance().proxy;
         if(jpc != null) {
             hc.getHostConfiguration().setProxy(jpc.name, jpc.port);
             if(jpc.getUserName() != null)
@@ -741,7 +741,7 @@ public class JDKInstaller extends ToolInstaller {
         return (DescriptorImpl)super.getDescriptor();
     }
 
-    @Extension
+    @Extension @Symbol("jdkInstaller")
     public static final class DescriptorImpl extends ToolInstallerDescriptor<JDKInstaller> {
         private String username;
         private Secret password;
@@ -805,7 +805,7 @@ public class JDKInstaller extends ToolInstaller {
     /**
      * JDK list.
      */
-    @Extension
+    @Extension @Symbol("jdk")
     public static final class JDKList extends Downloadable {
         public JDKList() {
             super(JDKInstaller.class);

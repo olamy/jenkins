@@ -24,6 +24,8 @@
  */
 package hudson.model;
 
+import jenkins.security.UserDetailsCache;
+import jenkins.util.SystemProperties;
 import com.google.common.base.Predicate;
 import com.infradna.tool.bridge_method_injector.WithBridgeMethods;
 import hudson.*;
@@ -51,6 +53,7 @@ import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
 import org.acegisecurity.providers.anonymous.AnonymousAuthenticationToken;
 import org.acegisecurity.userdetails.UserDetails;
 import org.acegisecurity.userdetails.UsernameNotFoundException;
+import org.jenkinsci.Symbol;
 import org.springframework.dao.DataAccessException;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
@@ -75,9 +78,11 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
@@ -153,9 +158,6 @@ public class User extends AbstractModelObject implements AccessControlled, Descr
     @Nonnull
     public static IdStrategy idStrategy() {
         Jenkins j = Jenkins.getInstance();
-        if (j == null) {
-            return IdStrategy.CASE_INSENSITIVE;
-        }
         SecurityRealm realm = j.getSecurityRealm();
         if (realm == null) {
             return IdStrategy.CASE_INSENSITIVE;
@@ -578,6 +580,7 @@ public class User extends AbstractModelObject implements AccessControlled, Descr
             }
         } finally {
             byNameLock.readLock().unlock();
+            UserDetailsCache.get().invalidateAll();
         }
     }
 
@@ -611,6 +614,7 @@ public class User extends AbstractModelObject implements AccessControlled, Descr
             }
         } finally {
             byNameLock.writeLock().unlock();
+            UserDetailsCache.get().invalidateAll();
         }
     }
 
@@ -743,6 +747,7 @@ public class User extends AbstractModelObject implements AccessControlled, Descr
             byNameLock.readLock().unlock();
         }
         Util.deleteRecursive(new File(getRootDir(), strategy.filenameOf(id)));
+        UserDetailsCache.get().invalidate(strategy.keyFor(id));
     }
 
     /**
@@ -760,7 +765,7 @@ public class User extends AbstractModelObject implements AccessControlled, Descr
         checkPermission(Jenkins.ADMINISTER);
 
         JSONObject json = req.getSubmittedForm();
-
+        String oldFullName = this.fullName;
         fullName = json.getString("fullName");
         description = json.getString("description");
 
@@ -785,6 +790,10 @@ public class User extends AbstractModelObject implements AccessControlled, Descr
         this.properties = props;
 
         save();
+
+        if (oldFullName != null && !oldFullName.equals(this.fullName)) {
+            UserDetailsCache.get().invalidate(oldFullName);
+        }
 
         FormApply.success(".").generateResponse(req,rsp,this);
     }
@@ -925,11 +934,11 @@ public class User extends AbstractModelObject implements AccessControlled, Descr
     
     public Object getDynamic(String token) {
         for(Action action: getTransientActions()){
-            if(action.getUrlName().equals(token))
+            if(Objects.equals(action.getUrlName(), token))
                 return action;
         }
         for(Action action: getPropertyActions()){
-            if(action.getUrlName().equals(token))
+            if(Objects.equals(action.getUrlName(), token))
                 return action;
         }
         return null;
@@ -999,7 +1008,7 @@ public class User extends AbstractModelObject implements AccessControlled, Descr
     /**
      * Resolve user ID from full name
      */
-    @Extension
+    @Extension @Symbol("fullName")
     public static class FullNameIdResolver extends CanonicalIdResolver {
 
         @Override
@@ -1025,7 +1034,8 @@ public class User extends AbstractModelObject implements AccessControlled, Descr
     @Restricted(NoExternalUse.class)
     public static class UserIDCanonicalIdResolver extends User.CanonicalIdResolver {
 
-        private static /* not final */ boolean SECURITY_243_FULL_DEFENSE = Boolean.parseBoolean(System.getProperty(User.class.getName() + ".SECURITY_243_FULL_DEFENSE", "true"));
+        private static /* not final */ boolean SECURITY_243_FULL_DEFENSE = 
+                SystemProperties.getBoolean(User.class.getName() + ".SECURITY_243_FULL_DEFENSE", true);
 
         private static final ThreadLocal<Boolean> resolving = new ThreadLocal<Boolean>() {
             @Override
@@ -1041,19 +1051,17 @@ public class User extends AbstractModelObject implements AccessControlled, Descr
                 return existing.getId();
             }
             if (SECURITY_243_FULL_DEFENSE) {
-                Jenkins j = Jenkins.getInstance();
-                if (j != null) {
-                    if (!resolving.get()) {
-                        resolving.set(true);
-                        try {
-                            return j.getSecurityRealm().loadUserByUsername(idOrFullName).getUsername();
-                        } catch (UsernameNotFoundException x) {
-                            LOGGER.log(Level.FINE, "not sure whether " + idOrFullName + " is a valid username or not", x);
-                        } catch (DataAccessException x) {
-                            LOGGER.log(Level.FINE, "could not look up " + idOrFullName, x);
-                        } finally {
-                            resolving.set(false);
-                        }
+                if (!resolving.get()) {
+                    resolving.set(true);
+                    try {
+                        UserDetails userDetails = UserDetailsCache.get().loadUserByUsername(idOrFullName);
+                        return userDetails.getUsername();
+                    } catch (UsernameNotFoundException x) {
+                        LOGGER.log(Level.FINE, "not sure whether " + idOrFullName + " is a valid username or not", x);
+                    } catch (DataAccessException | ExecutionException x) {
+                        LOGGER.log(Level.FINE, "could not look up " + idOrFullName, x);
+                    } finally {
+                        resolving.set(false);
                     }
                 }
             }
@@ -1077,6 +1085,6 @@ public class User extends AbstractModelObject implements AccessControlled, Descr
      *
      * JENKINS-22346.
      */
-    public static boolean ALLOW_NON_EXISTENT_USER_TO_LOGIN = Boolean.getBoolean(User.class.getName()+".allowNonExistentUserToLogin");
+    public static boolean ALLOW_NON_EXISTENT_USER_TO_LOGIN = SystemProperties.getBoolean(User.class.getName()+".allowNonExistentUserToLogin");
 }
 

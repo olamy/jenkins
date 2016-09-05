@@ -48,6 +48,7 @@ import hudson.util.StreamTaskListener;
 import hudson.util.TimeUnit2;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.jelly.XMLOutput;
+import org.jenkinsci.Symbol;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
 import org.kohsuke.stapler.StaplerRequest;
@@ -79,6 +80,7 @@ import org.kohsuke.stapler.StaplerResponse;
 
 import static java.util.logging.Level.*;
 import jenkins.model.RunAction2;
+import jenkins.util.SystemProperties;
 
 
 /**
@@ -176,7 +178,7 @@ public class SCMTrigger extends Trigger<Item> {
         return new File(job.getRootDir(),"scm-polling.log");
     }
 
-    @Extension
+    @Extension @Symbol("scm")
     public static class DescriptorImpl extends TriggerDescriptor {
 
         private static ThreadFactory threadFactory() {
@@ -663,5 +665,5 @@ public class SCMTrigger extends Trigger<Item> {
     /**
      * How long is too long for a polling activity to be in the queue?
      */
-    public static long STARVATION_THRESHOLD =Long.getLong(SCMTrigger.class.getName()+".starvationThreshold", TimeUnit2.HOURS.toMillis(1));
+    public static long STARVATION_THRESHOLD = SystemProperties.getLong(SCMTrigger.class.getName()+".starvationThreshold", TimeUnit2.HOURS.toMillis(1));
 }

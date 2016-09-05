@@ -54,6 +54,7 @@ import static com.google.common.collect.Lists.newArrayList;
 import static com.google.common.collect.Sets.newHashSet;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import jenkins.util.SystemProperties;
 
 /**
  * Records the parameter values used for a build.
@@ -90,7 +91,7 @@ public class ParametersAction implements RunAction2, Iterable<ParameterValue>, Q
 
     public ParametersAction(List<ParameterValue> parameters) {
         this.parameters = parameters;
-        String paramNames = System.getProperty(SAFE_PARAMETERS_SYSTEM_PROPERTY_NAME);
+        String paramNames = SystemProperties.getString(SAFE_PARAMETERS_SYSTEM_PROPERTY_NAME);
         safeParameters = new TreeSet<>();
         if (paramNames != null) {
             safeParameters.addAll(Arrays.asList(paramNames.split(",")));
@@ -305,7 +306,7 @@ public class ParametersAction implements RunAction2, Iterable<ParameterValue>, Q
             return parameters;
         }
 
-        if (Boolean.getBoolean(KEEP_UNDEFINED_PARAMETERS_SYSTEM_PROPERTY_NAME)) {
+        if (SystemProperties.getBoolean(KEEP_UNDEFINED_PARAMETERS_SYSTEM_PROPERTY_NAME)) {
             return parameters;
         }
 
