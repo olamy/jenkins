@@ -169,7 +169,7 @@ public class HudsonPrivateSecurityRealm extends AbstractPasswordBasedSecurityRea
 
     @Override
     public Details loadUserByUsername(String username) throws UsernameNotFoundException, DataAccessException {
-        User u = User.get(username,false);
+        User u = User.getById(username, false);
         Details p = u!=null ? u.getProperty(Details.class) : null;
         if(p==null)
             throw new UsernameNotFoundException("Password is not set: "+username);
@@ -324,7 +324,8 @@ public class HudsonPrivateSecurityRealm extends AbstractPasswordBasedSecurityRea
         if(si.username==null || si.username.length()==0)
             si.errorMessage = Messages.HudsonPrivateSecurityRealm_CreateAccount_UserNameRequired();
         else {
-            User user = User.get(si.username, false);
+            // do not create the user - we just want to check if the user already exists but is not a "login" user.
+            User user = User.getById(si.username, false); 
             if (null != user)
                 // Allow sign up. SCM people has no such property.
                 if (user.getProperty(Details.class) != null)
@@ -373,7 +374,7 @@ public class HudsonPrivateSecurityRealm extends AbstractPasswordBasedSecurityRea
      * Creates a new user account by registering a password to the user.
      */
     public User createAccount(String userName, String password) throws IOException {
-        User user = User.get(userName);
+        User user = User.getById(userName, true);
         user.addProperty(Details.fromPlainPassword(password));
         return user;
     }
@@ -416,7 +417,7 @@ public class HudsonPrivateSecurityRealm extends AbstractPasswordBasedSecurityRea
      * This in turn helps us set up the right navigation breadcrumb.
      */
     public User getUser(String id) {
-        return User.get(id);
+        return User.getById(id, true);
     }
 
     // TODO
@@ -467,6 +468,7 @@ public class HudsonPrivateSecurityRealm extends AbstractPasswordBasedSecurityRea
          * Field kept here to load old (pre 1.283) user records,
          * but now marked transient so field is no longer saved.
          */
+        @Deprecated
         private transient String password;
 
         private Details(String passwordHash) {
@@ -540,12 +542,9 @@ public class HudsonPrivateSecurityRealm extends AbstractPasswordBasedSecurityRea
 
         @Extension
         public static final class DescriptorImpl extends UserPropertyDescriptor {
+            @Override
             public String getDisplayName() {
-                // this feature is only when HudsonPrivateSecurityRealm is enabled
-                if(isEnabled())
-                    return Messages.HudsonPrivateSecurityRealm_Details_DisplayName();
-                else
-                    return null;
+                return Messages.HudsonPrivateSecurityRealm_Details_DisplayName();
             }
 
             @Override
@@ -567,6 +566,7 @@ public class HudsonPrivateSecurityRealm extends AbstractPasswordBasedSecurityRea
 
             @Override
             public boolean isEnabled() {
+                // this feature is only when HudsonPrivateSecurityRealm is enabled
                 return Jenkins.getInstance().getSecurityRealm() instanceof HudsonPrivateSecurityRealm;
             }
 

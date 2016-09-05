@@ -26,6 +26,7 @@ package hudson;
 import com.sun.jna.Memory;
 import com.sun.jna.Native;
 import com.sun.jna.NativeLong;
+
 import edu.umd.cs.findbugs.annotations.SuppressWarnings;
 import hudson.Proc.LocalProc;
 import hudson.model.TaskListener;
@@ -33,6 +34,7 @@ import hudson.os.PosixAPI;
 import hudson.util.QuotedStringTokenizer;
 import hudson.util.VariableResolver;
 import hudson.util.jna.WinIOException;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.time.FastDateFormat;
 import org.apache.tools.ant.BuildException;
@@ -40,14 +42,18 @@ import org.apache.tools.ant.Project;
 import org.apache.tools.ant.taskdefs.Chmod;
 import org.apache.tools.ant.taskdefs.Copy;
 import org.apache.tools.ant.types.FileSet;
+
 import jnr.posix.FileStat;
 import jnr.posix.POSIX;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+
 import java.io.*;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -70,13 +76,17 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import hudson.util.jna.Kernel32Utils;
-
 import static hudson.util.jna.GNUCLibrary.LIBC;
+
 import java.security.DigestInputStream;
+
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import org.apache.commons.codec.digest.DigestUtils;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 
 /**
  * Various utility methods that don't have more proper home.
@@ -774,6 +784,7 @@ public class Util {
      *   Deprecated since 2009-06-24, remove method after 2009-12-24.
      */
     @Nonnull
+    @Deprecated
     public static String combine(long n, @Nonnull String suffix) {
         String s = Long.toString(n)+' '+suffix;
         if(n!=1)
@@ -1269,6 +1280,7 @@ public class Util {
      * @deprecated as of 1.456
      *      Use {@link #resolveSymlink(File)}
      */
+    @Deprecated
     public static String resolveSymlink(File link, TaskListener listener) throws InterruptedException, IOException {
         return resolveSymlink(link);
     }
@@ -1413,16 +1425,36 @@ public class Util {
     }
 
     /**
-     * Checks if the public method defined on the base type with the given arguments
-     * are overridden in the given derived type.
+     * Checks if the method defined on the base type with the given arguments
+     * is overridden in the given derived type.
      */
     public static boolean isOverridden(@Nonnull Class base, @Nonnull Class derived, @Nonnull String methodName, @Nonnull Class... types) {
+        return !getMethod(base, methodName, types).equals(getMethod(derived, methodName, types));
+    }
+
+    private static Method getMethod(@Nonnull Class clazz, @Nonnull String methodName, @Nonnull Class... types) {
+        Method res = null;
         try {
-            return !base.getMethod(methodName, types).equals(
-                    derived.getMethod(methodName,types));
+            res = clazz.getDeclaredMethod(methodName, types);
+            // private, static or final methods can not be overridden
+            if (res != null && (Modifier.isPrivate(res.getModifiers()) || Modifier.isFinal(res.getModifiers()) 
+                    || Modifier.isStatic(res.getModifiers()))) {
+                res = null;
+            }
         } catch (NoSuchMethodException e) {
+            // Method not found in clazz, let's search in superclasses
+            Class superclass = clazz.getSuperclass();
+            if (superclass != null) {
+                res = getMethod(superclass, methodName, types);
+            }
+        } catch (SecurityException e) {
             throw new AssertionError(e);
         }
+        if (res == null) {
+            throw new IllegalArgumentException(
+                    String.format("Method %s not found in %s (or it is private, final or static)", methodName, clazz.getName()));
+        }
+        return res;
     }
 
     /**
@@ -1454,13 +1486,25 @@ public class Util {
      * The same algorithm can be seen in {@link URI}, but
      * implementing this by ourselves allow it to be more lenient about
      * escaping of URI.
+     *
+     * @deprecated Use {@code isAbsoluteOrSchemeRelativeUri} instead if your goal is to prevent open redirects
      */
+    @Deprecated
+    @RestrictedSince("1.651.2 / 2.TODO")
+    @Restricted(NoExternalUse.class)
     public static boolean isAbsoluteUri(@Nonnull String uri) {
         int idx = uri.indexOf(':');
         if (idx<0)  return false;   // no ':'. can't be absolute
 
         // #, ?, and / must not be before ':'
         return idx<_indexOf(uri, '#') && idx<_indexOf(uri,'?') && idx<_indexOf(uri,'/');
+    }
+
+    /**
+     * Return true iff the parameter does not denote an absolute URI and not a scheme-relative URI.
+     */
+    public static boolean isSafeToRedirectTo(@Nonnull String uri) {
+        return !isAbsoluteUri(uri) && !uri.startsWith("//");
     }
 
     /**
