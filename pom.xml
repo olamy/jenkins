@@ -106,6 +106,8 @@ THE SOFTWARE.
     <java.level>7</java.level>
     <cloudbeesInternalDistMgmtSnapshotsUrl>https://nexus-internal.cloudbees.com/content/repositories/snapshots</cloudbeesInternalDistMgmtSnapshotsUrl>
     <cloudbeesInternalDistMgmtReleasesUrl>https://nexus-internal.cloudbees.com/service/local/staging/deploy/maven2</cloudbeesInternalDistMgmtReleasesUrl>
+
+    <changelog.url>https://release-notes.cloudbees.com/product/Jenkins+OSS+LTS</changelog.url>
   </properties>
 
   <dependencyManagement>
