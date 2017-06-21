@@ -25,13 +25,15 @@
 package hudson.model;
 
 import com.google.common.collect.ImmutableSet;
+import hudson.DescriptorExtensionList;
 import hudson.FilePath;
 import hudson.Launcher;
-import hudson.Util;
 import hudson.Launcher.RemoteLauncher;
-import jenkins.util.SystemProperties;
+import hudson.Util;
 import hudson.model.Descriptor.FormException;
 import hudson.remoting.Callable;
+import hudson.remoting.Channel;
+import hudson.remoting.Which;
 import hudson.slaves.CommandLauncher;
 import hudson.slaves.ComputerLauncher;
 import hudson.slaves.DumbSlave;
@@ -44,7 +46,6 @@ import hudson.slaves.SlaveComputer;
 import hudson.util.ClockDifference;
 import hudson.util.DescribableList;
 import hudson.util.FormValidation;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -53,21 +54,20 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import java.util.TreeSet;
-
-import javax.servlet.ServletException;
-
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import javax.servlet.ServletException;
 import jenkins.model.Jenkins;
 import jenkins.security.MasterToSlaveCallable;
 import jenkins.slaves.WorkspaceLocator;
-
+import jenkins.util.SystemProperties;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.HttpResponse;
 import org.kohsuke.stapler.QueryParameter;
@@ -84,7 +84,7 @@ import org.kohsuke.stapler.StaplerResponse;
  * <p>
  * TODO: move out more stuff to {@link DumbSlave}.
  * 
- * On Febrary, 2016 a general renaming was done internally: the "slave" term was replaced by
+ * On February, 2016 a general renaming was done internally: the "slave" term was replaced by
  * "Agent". This change was applied in: UI labels/HTML pages, javadocs and log messages.
  * Java classes, fields, methods, etc were not renamed to avoid compatibility issues.
  * See <a href="https://issues.jenkins-ci.org/browse/JENKINS-27268">JENKINS-27268</a>.
@@ -123,7 +123,7 @@ public abstract class Slave extends Node implements Serializable {
     private Mode mode = Mode.NORMAL;
 
     /**
-     * Agent availablility strategy.
+     * Agent availability strategy.
      */
     private RetentionStrategy retentionStrategy;
 
@@ -375,7 +375,7 @@ public abstract class Slave extends Node implements Serializable {
             return res.openConnection();
         }
 
-        public URL getURL() throws MalformedURLException {
+        public URL getURL() throws IOException {
             String name = fileName;
             
             // Prevent the access to war contents & prevent the folder escaping (SECURITY-195)
@@ -385,6 +385,8 @@ public abstract class Slave extends Node implements Serializable {
             
             if (name.equals("hudson-cli.jar"))  {
                 name="jenkins-cli.jar";
+            } else if (name.equals("slave.jar") || name.equals("remoting.jar")) {
+                name = "lib/" + Which.jarFile(Channel.class).getName();
             }
             
             URL res = Jenkins.getInstance().servletContext.getResource("/WEB-INF/" + name);
@@ -396,11 +398,8 @@ public abstract class Slave extends Node implements Serializable {
         }
 
         public byte[] readFully() throws IOException {
-            InputStream in = connect().getInputStream();
-            try {
+            try (InputStream in = connect().getInputStream()) {
                 return IOUtils.toByteArray(in);
-            } finally {
-                in.close();
             }
         }
 
@@ -488,6 +487,63 @@ public abstract class Slave extends Node implements Serializable {
 
             return FormValidation.ok();
         }
+
+        /**
+         * Returns the list of {@link ComputerLauncher} descriptors appropriate to the supplied {@link Slave}.
+         *
+         * @param it the {@link Slave} or {@code null} to assume the slave is of type {@link #clazz}.
+         * @return the filtered list
+         * @since 2.12
+         */
+        @Nonnull
+        @Restricted(NoExternalUse.class) // intended for use by Jelly EL only (plus hack in DelegatingComputerLauncher)
+        public final List<Descriptor<ComputerLauncher>> computerLauncherDescriptors(@CheckForNull Slave it) {
+            DescriptorExtensionList<ComputerLauncher, Descriptor<ComputerLauncher>> all =
+                    Jenkins.getInstance().<ComputerLauncher, Descriptor<ComputerLauncher>>getDescriptorList(
+                            ComputerLauncher.class);
+            return it == null ? DescriptorVisibilityFilter.applyType(clazz, all)
+                    : DescriptorVisibilityFilter.apply(it, all);
+        }
+
+        /**
+         * Returns the list of {@link RetentionStrategy} descriptors appropriate to the supplied {@link Slave}.
+         *
+         * @param it the {@link Slave} or {@code null} to assume the slave is of type {@link #clazz}.
+         * @return the filtered list
+         * @since 2.12
+         */
+        @Nonnull
+        @SuppressWarnings("unchecked") // used by Jelly EL only
+        @Restricted(NoExternalUse.class) // used by Jelly EL only
+        public final List<Descriptor<RetentionStrategy<?>>> retentionStrategyDescriptors(@CheckForNull Slave it) {
+            return it == null ? DescriptorVisibilityFilter.applyType(clazz, RetentionStrategy.all())
+                    : DescriptorVisibilityFilter.apply(it, RetentionStrategy.all());
+        }
+
+        /**
+         * Returns the list of {@link NodePropertyDescriptor} appropriate to the supplied {@link Slave}.
+         *
+         * @param it the {@link Slave} or {@code null} to assume the slave is of type {@link #clazz}.
+         * @return the filtered list
+         * @since 2.12
+         */
+        @Nonnull
+        @SuppressWarnings("unchecked") // used by Jelly EL only
+        @Restricted(NoExternalUse.class) // used by Jelly EL only
+        public final List<NodePropertyDescriptor> nodePropertyDescriptors(@CheckForNull Slave it) {
+            List<NodePropertyDescriptor> result = new ArrayList<NodePropertyDescriptor>();
+            Collection<NodePropertyDescriptor> list =
+                    (Collection) Jenkins.getInstance().getDescriptorList(NodeProperty.class);
+            for (NodePropertyDescriptor npd : it == null
+                    ? DescriptorVisibilityFilter.applyType(clazz, list)
+                    : DescriptorVisibilityFilter.apply(it, list)) {
+                if (npd.isApplicable(clazz)) {
+                    result.add(npd);
+                }
+            }
+            return result;
+        }
+
     }
 
 

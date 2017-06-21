@@ -495,10 +495,10 @@ public class QueueTest {
         assertThat("The cycle should have been defanged and chain3 executed", queue.getItem(chain3), nullValue());
     }
 
-    private static class TestFlyweightTask extends TestTask implements Queue.FlyweightTask {
+    public static class TestFlyweightTask extends TestTask implements Queue.FlyweightTask {
         Executor exec;
         private final Label assignedLabel;
-        TestFlyweightTask(AtomicInteger cnt, Label assignedLabel) {
+        public TestFlyweightTask(AtomicInteger cnt, Label assignedLabel) {
             super(cnt);
             this.assignedLabel = assignedLabel;
         }
@@ -520,7 +520,7 @@ public class QueueTest {
         r.waitUntilNoActivity();
         assertEquals(1, cnt.get());
     }
-    private static class TestTask extends AbstractQueueTask {
+    static class TestTask extends AbstractQueueTask {
         private final AtomicInteger cnt;
         TestTask(AtomicInteger cnt) {
             this.cnt = cnt;
@@ -687,7 +687,6 @@ public class QueueTest {
         if(project2.getLastBuild()!=null)
             return;
         Queue.getInstance().cancel(projectError); // cancel job which cause dead of executor
-        e.doYank(); //restart executor
         while(!e.isIdle()){ //executor should take project2 from queue
             Thread.sleep(1000);
         }
@@ -877,7 +876,7 @@ public class QueueTest {
         assertTrue(Queue.getInstance().getBuildableItems().get(0).task.getDisplayName().equals(matrixProject.displayName));
     }
 
-    //let's make sure that the downstram project is not started before the upstream --> we want to simulate
+    //let's make sure that the downstream project is not started before the upstream --> we want to simulate
     // the case: buildable-->blocked-->buildable
     public static class BlockDownstreamProjectExecution extends NodeProperty<Slave> {
         @Override

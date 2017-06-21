@@ -114,6 +114,7 @@ import jenkins.model.lazy.LazyBuildMixIn;
 import jenkins.scm.DefaultSCMCheckoutStrategyImpl;
 import jenkins.scm.SCMCheckoutStrategy;
 import jenkins.scm.SCMCheckoutStrategyDescriptor;
+import jenkins.scm.SCMDecisionHandler;
 import jenkins.util.TimeDuration;
 import net.sf.json.JSONObject;
 import org.acegisecurity.Authentication;
@@ -791,6 +792,7 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
     }
 
     @Override
+    @RequirePOST
     public void doConfigSubmit( StaplerRequest req, StaplerResponse rsp ) throws IOException, ServletException, FormException {
         super.doConfigSubmit(req,rsp);
 
@@ -1045,6 +1047,8 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
         return Collections.unmodifiableList(actions);
     }
 
+    // TODO implement addAction, addOrReplaceAction, removeAction, removeActions, replaceActions
+
     /**
      * Gets the {@link Node} where this project was last built on.
      *
@@ -1104,7 +1108,7 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
      */
     @Deprecated
     public static class BecauseOfBuildInProgress extends BlockedBecauseOfBuildInProgress {
-        public BecauseOfBuildInProgress(AbstractBuild<?, ?> build) {
+        public BecauseOfBuildInProgress(@Nonnull AbstractBuild<?, ?> build) {
             super(build);
         }
     }
@@ -1145,7 +1149,15 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
     public CauseOfBlockage getCauseOfBlockage() {
         // Block builds until they are done with post-production
         if (isLogUpdated() && !isConcurrentBuild()) {
-            return new BlockedBecauseOfBuildInProgress(getLastBuild());
+            final R lastBuild = getLastBuild();
+            if (lastBuild != null) {
+                return new BlockedBecauseOfBuildInProgress(lastBuild);
+            } else {
+                // The build has been likely deleted after the isLogUpdated() call.
+                // Another cause may be an API implementation glitсh in the implementation for AbstractProject. 
+                // Anyway, we should let the code go then.
+                LOGGER.log(Level.FINE, "The last build has been deleted during the non-concurrent cause creation. The build is not blocked anymore");
+            }
         }
         if (blockBuildWhenDownstreamBuilding()) {
             AbstractProject<?,?> bup = getBuildingDownstream();
@@ -1322,6 +1334,11 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
             listener.getLogger().println(Messages.AbstractProject_Disabled());
             return NO_CHANGES;
         }
+        SCMDecisionHandler veto = SCMDecisionHandler.firstShouldPollVeto(this);
+        if (veto != null) {
+            listener.getLogger().println(Messages.AbstractProject_PollingVetoed(veto));
+            return NO_CHANGES;
+        }
 
         R lb = getLastBuild();
         if (lb==null) {
@@ -1356,11 +1373,11 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
             SCMPollListener.firePollingFailed(this, listener,e);
             return NO_CHANGES;
         } catch (IOException e) {
-            e.printStackTrace(listener.fatalError(e.getMessage()));
+            Functions.printStackTrace(e, listener.fatalError(e.getMessage()));
             SCMPollListener.firePollingFailed(this, listener,e);
             return NO_CHANGES;
         } catch (InterruptedException e) {
-            e.printStackTrace(listener.fatalError(Messages.AbstractProject_PollingABorted()));
+            Functions.printStackTrace(e, listener.fatalError(Messages.AbstractProject_PollingABorted()));
             SCMPollListener.firePollingFailed(this, listener,e);
             return NO_CHANGES;
         } catch (RuntimeException e) {
@@ -1604,7 +1621,7 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
     }
 
     /**
-     * Gets the specific trigger, or null if the propert is not configured for this job.
+     * Gets the specific trigger, or null if the property is not configured for this job.
      */
     public <T extends Trigger> T getTrigger(Class<T> clazz) {
         for (Trigger p : triggers()) {
@@ -2098,7 +2115,7 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
                 }
             }
             return FormValidation.okWithMarkup(Messages.AbstractProject_LabelLink(
-                    j.getRootUrl(), l.getUrl(), l.getNodes().size(), l.getClouds().size())
+                    j.getRootUrl(), Util.escape(l.getName()), l.getUrl(), l.getNodes().size(), l.getClouds().size())
             );
         }
 
