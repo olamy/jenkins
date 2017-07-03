@@ -33,7 +33,7 @@ THE SOFTWARE.
 
   <groupId>org.jenkins-ci.main</groupId>
   <artifactId>pom</artifactId>
-  <version>2.46.3-SNAPSHOT</version>
+  <version>2.60-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Jenkins main module</name>
@@ -77,11 +77,6 @@ THE SOFTWARE.
     <url>https://issues.jenkins-ci.org/browse/JENKINS/component/15593</url>
   </issueManagement>
 
-  <ciManagement>
-      <system>jenkins</system>
-      <url>https://ci.jenkins-ci.org/job/jenkins_main_trunk/</url>
-  </ciManagement>
-
   <properties>
     <!-- *.html files are in UTF-8, and *.properties are in iso-8859-1, so this configuration is actually incorrect,
     but this suppresses a warning from Maven, and as long as we don't do filtering we should be OK. -->
@@ -105,7 +100,7 @@ THE SOFTWARE.
     <findbugs.failOnError>true</findbugs.failOnError>
     <test-annotations.version>1.2</test-annotations.version>
 
-    <java.level>7</java.level>
+    <java.level>8</java.level>
     <cloudbeesInternalDistMgmtSnapshotsUrl>https://nexus-internal.cloudbees.com/content/repositories/snapshots</cloudbeesInternalDistMgmtSnapshotsUrl>
     <cloudbeesInternalDistMgmtReleasesUrl>https://nexus-internal.cloudbees.com/service/local/staging/deploy/maven2</cloudbeesInternalDistMgmtReleasesUrl>
 
@@ -475,17 +470,12 @@ THE SOFTWARE.
         <plugin>
           <groupId>com.infradna.tool</groupId>
           <artifactId>bridge-method-injector</artifactId>
-          <version>1.13</version>
+          <version>1.15</version>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>antlr-maven-plugin</artifactId>
           <version>2.1</version>
-        </plugin>
-        <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>apt-maven-plugin</artifactId>
-          <version>1.0-alpha-5</version>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
@@ -533,7 +523,7 @@ THE SOFTWARE.
         <plugin>
           <groupId>org.jenkins-ci.tools</groupId>
           <artifactId>maven-hpi-plugin</artifactId>
-          <version>1.120</version>
+          <version>1.122</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -609,6 +599,7 @@ THE SOFTWARE.
           <!-- work around for a bug in javadoc plugin that causes the release to fail. see MRELEASE-271 -->
           <preparationGoals>clean install</preparationGoals>
           <goals>-DskipTests -Danimal.sniffer.skip=false javadoc:javadoc deploy javadoc:aggregate</goals>
+          <pushChanges>false</pushChanges>
           <localCheckout>true</localCheckout>
           <tagNameFormat>jenkins-@{project.version}</tagNameFormat>
         </configuration>
@@ -670,7 +661,7 @@ THE SOFTWARE.
             <configuration>
               <rules>
                 <requireJavaVersion>
-                  <version>1.7.0</version>
+                  <version>1.8.0</version>
                 </requireJavaVersion>
                 <requireMavenVersion>
                   <version>3.0</version>

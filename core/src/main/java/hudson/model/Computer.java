@@ -285,7 +285,8 @@ public /*transient*/ abstract class Computer extends Actionable implements Acces
     /**
      * This is where the log from the remote agent goes.
      * The method also creates a log directory if required.
-     * @see #getLogDir(), #relocateOldLogs()
+     * @see #getLogDir()
+     * @see #relocateOldLogs()
      */
     public @Nonnull File getLogFile() {
         return new File(getLogDir(),"slave.log");
@@ -792,7 +793,7 @@ public /*transient*/ abstract class Computer extends Actionable implements Acces
     }
 
     public RunList getBuilds() {
-        return RunList.fromJobs(Jenkins.getInstance().allItems(Job.class)).node(getNode());
+        return RunList.fromJobs((Iterable)Jenkins.getInstance().allItems(Job.class)).node(getNode());
     }
 
     /**
@@ -969,6 +970,19 @@ public /*transient*/ abstract class Computer extends Actionable implements Acces
     @Exported
     public List<OneOffExecutor> getOneOffExecutors() {
         return new ArrayList<OneOffExecutor>(oneOffExecutors);
+    }
+
+    /**
+     * Gets the read-only snapshot view of all {@link Executor} instances including {@linkplain OneOffExecutor}s.
+     *
+     * @return the read-only snapshot view of all {@link Executor} instances including {@linkplain OneOffExecutor}s.
+     * @since TODO
+     */
+    public List<Executor> getAllExecutors() {
+        List<Executor> result = new ArrayList<>(executors.size() + oneOffExecutors.size());
+        result.addAll(executors);
+        result.addAll(oneOffExecutors);
+        return result;
     }
 
     /**
