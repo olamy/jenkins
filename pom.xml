@@ -246,21 +246,6 @@ THE SOFTWARE.
     <pluginManagement>
       <plugins>
         <plugin>
-          <groupId>org.sonatype.plugins</groupId>
-          <artifactId>nexus-staging-maven-plugin</artifactId>
-          <version>1.6.7</version>
-          <extensions>true</extensions>
-          <configuration>
-            <serverId>cloudbees-internal-staging</serverId>
-            <nexusUrl>https://nexus-internal.cloudbees.com/</nexusUrl>
-            <stagingProfileId>ac6439af20821</stagingProfileId>
-            <tags>
-              <localUsername>${env.USER}</localUsername>
-              <javaVersion>${java.version}</javaVersion>
-            </tags>
-          </configuration>
-        </plugin>
-        <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>build-helper-maven-plugin</artifactId>
           <version>1.7</version>
@@ -587,6 +572,21 @@ THE SOFTWARE.
 
     <plugins>
       <plugin>
+        <groupId>org.sonatype.plugins</groupId>
+        <artifactId>nexus-staging-maven-plugin</artifactId>
+        <version>1.6.7</version>
+        <extensions>true</extensions>
+        <configuration>
+          <serverId>cloudbees-internal-staging</serverId>
+          <nexusUrl>https://nexus-internal.cloudbees.com/</nexusUrl>
+          <stagingProfileId>ac6439af20821</stagingProfileId>
+          <tags>
+            <localUsername>${env.USER}</localUsername>
+            <javaVersion>${java.version}</javaVersion>
+          </tags>
+        </configuration>
+      </plugin>
+      <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
       </plugin>
@@ -599,7 +599,7 @@ THE SOFTWARE.
           <!-- work around for a bug in javadoc plugin that causes the release to fail. see MRELEASE-271 -->
           <preparationGoals>clean install</preparationGoals>
           <goals>-DskipTests -Danimal.sniffer.skip=false javadoc:javadoc deploy javadoc:aggregate</goals>
-          <pushChanges>false</pushChanges>
+          <pushChanges>true</pushChanges>
           <localCheckout>true</localCheckout>
           <tagNameFormat>jenkins-@{project.version}</tagNameFormat>
         </configuration>
