@@ -55,8 +55,8 @@ THE SOFTWARE.
   </modules>
 
   <scm>
-    <connection>scm:git:ssh://git@github.com/cloudbees/hudson.git</connection>
-    <developerConnection>scm:git:ssh://git@github.com/cloudbees/hudson.git</developerConnection>
+    <connection>scm:git:https://github.com/cloudbees-oss/private-jenkins.git</connection>
+    <developerConnection>scm:git:https://github.com/cloudbees-oss/private-jenkins.git</developerConnection>
   </scm>
 
   <distributionManagement>
