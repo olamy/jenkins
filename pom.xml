@@ -330,11 +330,6 @@ THE SOFTWARE.
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-gpg-plugin</artifactId>
-          <version>1.4</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-install-plugin</artifactId>
           <version>2.3.1</version>
         </plugin>
@@ -374,20 +369,30 @@ THE SOFTWARE.
         </plugin>
         <plugin>
           <artifactId>maven-jarsigner-plugin</artifactId>
-          <version>1.2</version>
-          <configuration>
-            <!--
-              during the development, debug profile will cause
-              the jars to be signed by a self-certified dummy public key.
-
-              For release, you should define the real values in ~/.m2/settings.xml
-            -->
-            <alias>${hudson.sign.alias}</alias>
-            <storepass>${hudson.sign.storepass}</storepass>
-            <keystore>${hudson.sign.keystore}</keystore>
-            <keypass>${hudson.sign.keypass}</keypass>
-            <tsa>http://timestamp.digicert.com</tsa>
-          </configuration>
+          <version>1.4</version>
+          <executions>
+            <execution>
+              <id>sign-war</id>
+              <phase>verify</phase>
+              <goals>
+                <goal>sign</goal>
+              </goals>
+              <configuration>
+                <!--
+                    during the development, debug profile defined in ../pom.xml will cause
+                    the jars to be signed by a self-certified dummy public key.
+                    For release, you should define the real values in ~/.m2/settings.xml
+                -->
+                <alias>${cloudbees.sign.alias}</alias>
+                <keystore>${cloudbees.sign.keystore}</keystore>
+                <storepass>${cloudbees.sign.storepass}</storepass>
+                <keypass>${cloudbees.sign.keypass}</keypass>
+                <removeExistingSignatures>true</removeExistingSignatures>
+                <processAttachedArtifacts>false</processAttachedArtifacts>
+                <tsa>http://timestamp.digicert.com</tsa>
+              </configuration>
+            </execution>
+          </executions>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -849,18 +854,6 @@ THE SOFTWARE.
                     <descriptor>assembly-src.xml</descriptor>
                   </descriptors>
                 </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <artifactId>maven-gpg-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>sign-artifacts</id>
-                <phase>verify</phase>
-                <goals>
-                  <goal>sign</goal>
-                </goals>
               </execution>
             </executions>
           </plugin>
