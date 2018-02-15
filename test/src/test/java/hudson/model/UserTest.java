@@ -415,7 +415,7 @@ public class UserTest {
         auth.add(Jenkins.ADMINISTER, user.getId());
         auth.add(Jenkins.READ, user2.getId());
         SecurityContextHolder.getContext().setAuthentication(user.impersonate());
-        HtmlForm form = j.createWebClient().login(user.getId(), "password").goTo(user2.getUrl() + "/configure").getFormByName("config");
+        HtmlForm form = j.createWebClient().withBasicCredentials(user.getId(), "password").goTo(user2.getUrl() + "/configure").getFormByName("config");
         form.getInputByName("_.fullName").setValueAttribute("Alice Smith");
         j.submit(form);
         assertEquals("User should have full name Alice Smith.", "Alice Smith", user2.getFullName());
@@ -429,7 +429,7 @@ public class UserTest {
                fail("AccessDeniedException should be thrown.");
             }
         }
-        form = j.createWebClient().login(user2.getId(), "password").goTo(user2.getUrl() + "/configure").getFormByName("config");
+        form = j.createWebClient().withBasicCredentials(user2.getId(), "password").goTo(user2.getUrl() + "/configure").getFormByName("config");
         
         form.getInputByName("_.fullName").setValueAttribute("John");
         j.submit(form);
@@ -811,6 +811,25 @@ public class UserTest {
         assertTrue(emptyDir.exists());
         assertFalse(new File(rootDir, "config.xml").exists());
         assertThat(empty.getFullName(), equalTo("Empty"));
+    }
+
+    @Issue("JENKINS-47909")
+    @LocalData
+    @Test
+    public void shellyUsernameMigrated() {
+        File rootDir = new File(Jenkins.getInstance().getRootDir(), "users");
+        User user = User.getById("bla$phem.us", false);
+        assertCorrectConfig(user, "users/bla$0024phem.us/config.xml");
+        assertFalse(new File(rootDir, "bla$phem.us").exists());
+        assertTrue(user.getConfigFile().getFile().exists());
+        assertThat(user.getFullName(), equalTo("Weird Username"));
+        user = User.getById("make\u1000000", false);
+        assertNotNull("we do not prevent accesses to the phony name, alas", user);
+        user = User.getById("make$1000000", false);
+        assertCorrectConfig(user, "users/make$00241000000/config.xml");
+        assertFalse(new File(rootDir, "make$1000000").exists());
+        assertTrue("but asking for the real name triggers migration", user.getConfigFile().getFile().exists());
+        assertThat(user.getFullName(), equalTo("Greedy Fella"));
     }
 
     private static void assertCorrectConfig(User user, String unixPath) {
