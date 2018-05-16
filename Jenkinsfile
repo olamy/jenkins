@@ -15,7 +15,7 @@ def runTests = true
 
 properties([buildDiscarder(logRotator(numToKeepStr: '15', artifactNumToKeepStr: '15'))])
 
-node('pct-agent-template') {
+node('private-core-template-maven3.5.3') {
     timestamps {
         // First stage is actually checking out the source. Since we're using Multibranch
         // currently, we can use "checkout scm".
