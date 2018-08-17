@@ -15,7 +15,7 @@ def runTests = true
 
 properties([buildDiscarder(logRotator(numToKeepStr: '15', artifactNumToKeepStr: '15'))])
 
-node('private-core-template-maven3.5.3') {
+node('private-core-template-maven3.5.4') {
     timestamps {
         // First stage is actually checking out the source. Since we're using Multibranch
         // currently, we can use "checkout scm".
