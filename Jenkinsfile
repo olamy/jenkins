@@ -42,10 +42,8 @@ node('private-core-template-maven3.5.4') {
                             sh 'test `git status --short | tee /dev/stderr | wc --bytes` -eq 0'
                         }
                     }
-                }
+                } finally {
 
-                // Once we've built, archive the artifacts and the test results.
-                stage("Publishing") {
                     if (runTests) {
                         junit healthScaleFactor: 20.0, testResults: '**/target/surefire-reports/*.xml'
                     }
