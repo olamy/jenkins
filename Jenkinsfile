@@ -37,7 +37,7 @@ node('private-core-template-maven3.5.4') {
                         // Invoke the maven run within the environment we've created
                         withEnv(mvnEnv) {
                             // -Dmaven.repo.local=… tells Maven to create a subdir in the temporary directory for the local Maven repository
-                            def mvnCmd = "mvn -Pdebug -U -Dset.changelist help:evaluate -Dexpression=changelist -Doutput=$changelistF clean verify ${runTests ? '-Dmaven.test.failure.ignore' : '-DskipTests'} -V -B -Dmaven.repo.local=$m2repo -s settings.xml -e"
+                            def mvnCmd = "mvn -Pdebug -U -Dset.changelist help:evaluate -Dexpression=changelist -Doutput=$changelistF -Dignore.dirt clean verify ${runTests ? '-Dmaven.test.failure.ignore' : '-DskipTests'} -V -B -Dmaven.repo.local=$m2repo -s settings.xml -e"
                             sh mvnCmd
                         }
                     }
