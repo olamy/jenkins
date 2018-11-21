@@ -22,6 +22,8 @@ ready to take over, or private builds are used the the current LTS line, we do t
 * Run `mvn release:update-versions -DdevelopmentVersion=x.yyy.zz-cb-w-SNAPSHOT` on
   the workspace from the previous step. If unsure, see commit d08cf489bce4ab8f109c59b1ce3aaec7a87d3298
   for an actual example of how this was done. This step reduces the merge conflict in the next step.
+* Only if incremental is enabled (from 2.138 LTS onwards), then run also `mvn -V -B io.jenkins.tools.incrementals:incrementals-maven-plugin:reincrementalify`. Further details: https://github.com/jenkinsci/incrementals-tools#running-maven-releases
+
 
 * Run `git merge nectarize` to merge the tip of the `nectarize`.
   If this step results in merge conflicts, *DO NOT RESOLVE merge conflicts here*. Instead,
@@ -44,7 +46,7 @@ Say you discovered that you need to update the `nectarize` branch while trying t
 `stable-x.zzz`. The following process updates `nectarize` branch:
 
 * Checkout the `nectarize` branch from the cloudbees repo
-* `git merge 'jenkins-x.zzz^'` to merge the parent commit of the release tag into this workspace (you will need the        community repository tags for this).
+* `git merge 'jenkins-x.zzz^'` to merge the parent commit of the release tag into this workspace (you will need the community repository tags for this).
 * Resolve merge conflicts carefully. If necessary, check the difference between the `nectarize`
   branch and its previous base.
 * Commit the change and push that into the `nectarize` branch
