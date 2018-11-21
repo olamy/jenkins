@@ -38,6 +38,7 @@ import hudson.*;
 import hudson.Launcher.LocalLauncher;
 import jenkins.AgentProtocol;
 import jenkins.diagnostics.URICheckEncodingMonitor;
+import jenkins.security.RedactSecretJsonInErrorMessageSanitizer;
 import jenkins.util.SystemProperties;
 import hudson.cli.declarative.CLIMethod;
 import hudson.cli.declarative.CLIResolver;
@@ -797,7 +798,7 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
 
     /**
      * Secret key generated once and used for a long time, beyond
-     * container start/stop. Persisted outside <tt>config.xml</tt> to avoid
+     * container start/stop. Persisted outside {@code config.xml} to avoid
      * accidental exposure.
      */
     private transient final String secretKey;
@@ -893,8 +894,10 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
             if (pluginManager==null)
                 pluginManager = PluginManager.createDefault(this);
             this.pluginManager = pluginManager;
+            WebApp webApp = WebApp.get(servletContext);
             // JSON binding needs to be able to see all the classes from all the plugins
-            WebApp.get(servletContext).setClassLoader(pluginManager.uberClassLoader);
+            webApp.setClassLoader(pluginManager.uberClassLoader);
+            webApp.setJsonInErrorMessageSanitizer(RedactSecretJsonInErrorMessageSanitizer.INSTANCE);
 
             adjuncts = new AdjunctManager(servletContext, pluginManager.uberClassLoader,"adjuncts/"+SESSION_HASH, TimeUnit.DAYS.toMillis(365));
 
@@ -1557,7 +1560,7 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
 
     /**
      * Gets the plugin object from its short name.
-     * This allows URL <tt>hudson/plugin/ID</tt> to be served by the views
+     * This allows URL {@code hudson/plugin/ID} to be served by the views
      * of the plugin class.
      * @param shortName Short name of the plugin
      * @return The plugin singleton or {@code null} if for some reason the plugin is not loaded.
@@ -4196,7 +4199,7 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
 
                     // give some time for the browser to load the "reloading" page
                     Thread.sleep(5000);
-                    LOGGER.severe(String.format("Restarting VM as requested by %s",exitUser));
+                    LOGGER.info(String.format("Restarting VM as requested by %s",exitUser));
                     for (RestartListener listener : RestartListener.all())
                         listener.onRestart();
                     lifecycle.restart();
@@ -4233,7 +4236,7 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
                         // give some time for the browser to load the "reloading" page
                         LOGGER.info("Restart in 10 seconds");
                         Thread.sleep(10000);
-                        LOGGER.severe(String.format("Restarting VM as requested by %s",exitUser));
+                        LOGGER.info(String.format("Restarting VM as requested by %s",exitUser));
                         for (RestartListener listener : RestartListener.all())
                             listener.onRestart();
                         lifecycle.restart();
@@ -4280,7 +4283,7 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
     @RequirePOST
     public void doExit( StaplerRequest req, StaplerResponse rsp ) throws IOException {
         checkPermission(ADMINISTER);
-        LOGGER.severe(String.format("Shutting down VM as requested by %s from %s",
+        LOGGER.info(String.format("Shutting down VM as requested by %s from %s",
                 getAuthentication().getName(), req!=null?req.getRemoteAddr():"???"));
         if (rsp!=null) {
             rsp.setStatus(HttpServletResponse.SC_OK);
@@ -4311,7 +4314,7 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
             public void run() {
                 try {
                     ACL.impersonate(ACL.SYSTEM);
-                    LOGGER.severe(String.format("Shutting down VM as requested by %s from %s",
+                    LOGGER.info(String.format("Shutting down VM as requested by %s from %s",
                                                 exitUser, exitAddr));
                     // Wait 'til we have no active executors.
                     doQuietDown(true, 0);
@@ -4618,7 +4621,7 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
     }
     
     /**
-     * Exposes the current user to <tt>/me</tt> URL.
+     * Exposes the current user to {@code /me} URL.
      */
     public User getMe() {
         User u = User.current();
@@ -5030,7 +5033,7 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
                 if (idx > 0) {
                     return new VersionNumber(versionString.substring(0,idx));
                 }
-            } catch (NumberFormatException _) {
+            } catch (NumberFormatException ignored) {
                 // fall through
             }
 

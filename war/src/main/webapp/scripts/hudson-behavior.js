@@ -517,7 +517,16 @@ function registerRegexpValidator(e,regexp,message) {
  *      YUI Button widget.
  */
 function makeButton(e,onclick) {
-    var h = e.onclick;
+    var type = e.type;
+    var h = e.onclick || function (event) {
+        if (type && type.toLowerCase() === 'submit') {
+            var target = event.target;
+            var form = findAncestor(target, "FORM");
+            form.submit();
+        } else {
+            //FIXME: get some usecases for else
+        }
+    };
     var clsName = e.className;
     var n = e.name;
     var btn = new YAHOO.widget.Button(e,{});
@@ -1845,7 +1854,6 @@ function updateBuildHistory(ajaxUrl,nBuild) {
                     var wrap = blockWrap(buildDetails, buildControls);
                     indentMultiline(wrap);
                     Element.addClassName(wrap, "build-details-controls");
-                    $(displayName).setStyle({width: '100%'});
                     detailsOverflowParams = getElementOverflowParams(buildDetails); // recalculate
                     expandLeftWithRight(detailsOverflowParams, controlsOverflowParams);
                     setBuildControlWidths();
@@ -2589,7 +2597,12 @@ function buildFormTree(form) {
                     addProperty(p, e.name.substring(r), e.value);
                 }
                 break;
-
+            case "password":
+                p = findParent(e);
+                addProperty(p, e.name, e.value);
+                // must be kept in sync with RedactSecretJsonForTraceSanitizer.REDACT_KEY
+                addProperty(p, "$redact", shortenName(e.name));
+                break;
             default:
                 p = findParent(e);
                 addProperty(p, e.name, e.value);
