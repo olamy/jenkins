@@ -81,7 +81,7 @@ import static org.apache.commons.io.FilenameUtils.getBaseName;
  * for Jenkins to control {@link Plugin}.
  *
  * <p>
- * A plug-in is packaged into a jar file whose extension is <tt>".jpi"</tt> (or <tt>".hpi"</tt> for backward compatibility),
+ * A plug-in is packaged into a jar file whose extension is {@code ".jpi"} (or {@code ".hpi"} for backward compatibility),
  * A plugin needs to have a special manifest entry to identify what it is.
  *
  * <p>
@@ -126,7 +126,7 @@ public class PluginWrapper implements Comparable<PluginWrapper>, ModelObject {
     /**
      * Base URL for loading static resources from this plugin.
      * Null if disabled. The static resources are mapped under
-     * <tt>CONTEXTPATH/plugin/SHORTNAME/</tt>.
+     * {@code CONTEXTPATH/plugin/SHORTNAME/}.
      */
     public final URL baseResourceURL;
 
@@ -151,7 +151,7 @@ public class PluginWrapper implements Comparable<PluginWrapper>, ModelObject {
 
     /**
      * True if this plugin is activated for this session.
-     * The snapshot of <tt>disableFile.exists()</tt> as of the start up.
+     * The snapshot of {@code disableFile.exists()} as of the start up.
      */
     private final boolean active;
     
@@ -188,7 +188,7 @@ public class PluginWrapper implements Comparable<PluginWrapper>, ModelObject {
     /**
      * A String error message, and a boolean indicating whether it's an original error (false) or downstream from an original one (true)
      */
-    private final transient Map<String, Boolean> dependencyErrors = new HashMap<>();
+    private final transient Map<String, Boolean> dependencyErrors = new HashMap<>(0);
 
     /**
      * Is this plugin bundled in jenkins.war?
@@ -256,8 +256,8 @@ public class PluginWrapper implements Comparable<PluginWrapper>, ModelObject {
             int idx = s.indexOf(':');
             if(idx==-1)
                 throw new IllegalArgumentException("Illegal dependency specifier "+s);
-            this.shortName = s.substring(0,idx);
-            String version = s.substring(idx+1);
+            this.shortName = Util.intern(s.substring(0,idx));
+            String version = Util.intern(s.substring(idx+1));
 
             boolean isOptional = false;
             String[] osgiProperties = version.split("[;]");
@@ -300,7 +300,7 @@ public class PluginWrapper implements Comparable<PluginWrapper>, ModelObject {
 			List<Dependency> dependencies, List<Dependency> optionalDependencies) {
         this.parent = parent;
 		this.manifest = manifest;
-		this.shortName = computeShortName(manifest, archive.getName());
+		this.shortName = Util.intern(computeShortName(manifest, archive.getName()));
 		this.baseResourceURL = baseResourceURL;
 		this.classLoader = classLoader;
 		this.disableFile = disableFile;

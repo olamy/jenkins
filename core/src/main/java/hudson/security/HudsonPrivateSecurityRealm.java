@@ -74,6 +74,8 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
 import static javax.servlet.http.HttpServletResponse.SC_UNAUTHORIZED;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -260,6 +262,13 @@ public class HudsonPrivateSecurityRealm extends AbstractPasswordBasedSecurityRea
      */
     @SuppressWarnings("ACL.impersonate")
     private void loginAndTakeBack(StaplerRequest req, StaplerResponse rsp, User u) throws ServletException, IOException {
+        HttpSession session = req.getSession(false);
+        if (session != null) {
+            // avoid session fixation
+            session.invalidate();
+        }
+        req.getSession(true);
+        
         // ... and let him login
         Authentication a = new UsernamePasswordAuthenticationToken(u.getId(),req.getParameter("password1"));
         a = this.getSecurityComponents().manager.authenticate(a);
@@ -532,8 +541,9 @@ public class HudsonPrivateSecurityRealm extends AbstractPasswordBasedSecurityRea
      * This is to map users under the security realm URL.
      * This in turn helps us set up the right navigation breadcrumb.
      */
+    @Restricted(NoExternalUse.class)
     public User getUser(String id) {
-        return User.getById(id, true);
+        return User.getById(id, User.ALLOW_USER_CREATION_VIA_URL && hasPermission(Jenkins.ADMINISTER));
     }
 
     // TODO
@@ -730,7 +740,7 @@ public class HudsonPrivateSecurityRealm extends AbstractPasswordBasedSecurityRea
      *
      * <p>
      * The salt is prepended to the hashed password and returned. So the encoded password is of the form
-     * <tt>SALT ':' hash(PASSWORD,SALT)</tt>.
+     * {@code SALT ':' hash(PASSWORD,SALT)}.
      *
      * <p>
      * This abbreviates the need to store the salt separately, which in turn allows us to hide the salt handling
@@ -739,11 +749,11 @@ public class HudsonPrivateSecurityRealm extends AbstractPasswordBasedSecurityRea
     /*package*/ static final PasswordEncoder CLASSIC = new PasswordEncoder() {
         private final PasswordEncoder passwordEncoder = new ShaPasswordEncoder(256);
 
-        public String encodePassword(String rawPass, Object _) throws DataAccessException {
+        public String encodePassword(String rawPass, Object obj) throws DataAccessException {
             return hash(rawPass);
         }
 
-        public boolean isPasswordValid(String encPass, String rawPass, Object _) throws DataAccessException {
+        public boolean isPasswordValid(String encPass, String rawPass, Object obj) throws DataAccessException {
             // pull out the sale from the encoded password
             int i = encPass.indexOf(':');
             if(i<0) return false;
@@ -779,11 +789,11 @@ public class HudsonPrivateSecurityRealm extends AbstractPasswordBasedSecurityRea
      * {@link PasswordEncoder} that uses jBCrypt.
      */
     private static final PasswordEncoder JBCRYPT_ENCODER = new PasswordEncoder() {
-        public String encodePassword(String rawPass, Object _) throws DataAccessException {
+        public String encodePassword(String rawPass, Object obj) throws DataAccessException {
             return BCrypt.hashpw(rawPass,BCrypt.gensalt());
         }
 
-        public boolean isPasswordValid(String encPass, String rawPass, Object _) throws DataAccessException {
+        public boolean isPasswordValid(String encPass, String rawPass, Object obj) throws DataAccessException {
             return BCrypt.checkpw(rawPass,encPass);
         }
     };

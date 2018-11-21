@@ -408,7 +408,7 @@ public class SlaveComputer extends Computer {
      *      Stream connected to the remote peer. It's the caller's responsibility to do
      *      buffering on this stream, if that's necessary.
      * @param launchLog
-     *      If non-null, receive the portion of data in <tt>is</tt> before
+     *      If non-null, receive the portion of data in {@code is} before
      *      the data goes into the "binary mode". This is useful
      *      when the established communication channel might include some data that might
      *      be useful for debugging/trouble-shooting.
@@ -529,7 +529,7 @@ public class SlaveComputer extends Computer {
      * remote FS is specified as a relative path.
      * @see #getAbsoluteRemoteFs()
      * @return the remote FS root absolute path or {@code null} if the agent is off-line or don't have connect permission.
-     * @since TODO
+     * @since 2.125
      */
     @Exported
     @Restricted(DoNotUse.class)
@@ -801,7 +801,7 @@ public class SlaveComputer extends Computer {
 
     public RetentionStrategy getRetentionStrategy() {
         Slave n = getNode();
-        return n==null ? RetentionStrategy.INSTANCE : n.getRetentionStrategy();
+        return n==null ? RetentionStrategy.NOOP : n.getRetentionStrategy();
     }
 
     /**
