@@ -1067,6 +1067,7 @@ table.parameters > tbody:hover {
 }
 
 .build-row.multi-line .build-row-cell .pane.build-name.block {
+  padding-right: 20px;
   width: 100%;
 }
 .build-row-cell .pane.build-controls.block {
@@ -1493,7 +1494,7 @@ DIV.yahooTree td {
 
 #search-box-completion .yui-ac-content {
   border: 1px solid black;
-  width:25em;
+  width:35em;
   background-color: white;
   overflow: hidden;
 }
