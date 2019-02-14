@@ -34,7 +34,7 @@ THE SOFTWARE.
 
   <groupId>org.jenkins-ci.main</groupId>
   <artifactId>jenkins-parent</artifactId>
-  <version>${revision}${changelist}</version>
+  <version>2.164.1-cb-1-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Jenkins main module</name>
