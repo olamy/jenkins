@@ -27,8 +27,6 @@ import hudson.ExtensionList;
 import hudson.model.User;
 import jenkins.security.SecurityListener;
 import org.apache.tools.ant.ExtensionPoint;
-import org.kohsuke.accmod.Restricted;
-import org.kohsuke.accmod.restrictions.NoExternalUse;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -38,8 +36,6 @@ import java.util.logging.Logger;
 /**
  * Listener notified when a user was requested to changed their seed
  */
-//TODO remove restriction on the weekly after the security fix
-@Restricted(NoExternalUse.class)
 public abstract class UserSeedChangeListener extends ExtensionPoint {
     private static final Logger LOGGER = Logger.getLogger(SecurityListener.class.getName());
 

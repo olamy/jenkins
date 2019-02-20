@@ -58,8 +58,6 @@ import java.util.Objects;
  * @see hudson.security.AuthenticationProcessingFilter2 for the addition of seed inside the session
  * @see hudson.security.HttpSessionContextIntegrationFilter2 for the seed check from the session before using it
  */
-//TODO remove restriction on the weekly after the security fix
-@Restricted(NoExternalUse.class)
 public class UserSeedProperty extends UserProperty {
     /**
      * Escape hatch for User seed based revocation feature. 
@@ -71,7 +69,6 @@ public class UserSeedProperty extends UserProperty {
     /**
      * Hide the user seed section from the UI to prevent accidental use
      */
-    @Restricted(NoExternalUse.class)
     public static /* Script Console modifiable */ boolean HIDE_USER_SEED_SECTION = SystemProperties.getBoolean(UserSeedProperty.class.getName() + ".hideUserSeedSection");
 
     public static final String USER_SESSION_SEED = "_JENKINS_SESSION_SEED";

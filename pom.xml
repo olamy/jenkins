@@ -59,6 +59,7 @@ THE SOFTWARE.
   <scm>
     <connection>scm:git:https://github.com/cloudbees-oss/private-jenkins.git</connection>
     <developerConnection>scm:git:https://github.com/cloudbees-oss/private-jenkins.git</developerConnection>
+    <tag>HEAD</tag>
   </scm>
 
   <distributionManagement>
