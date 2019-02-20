@@ -10,6 +10,7 @@ import hudson.model.FreeStyleProject;
 import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.ExtractResourceSCM;
@@ -68,6 +69,7 @@ public class JenkinsBuildsAndWorkspacesDirectoriesTest {
     }
 
     @Issue("JENKINS-50164")
+    @Ignore("Infrastructure issues")
     @Test
     public void badValueForBuildsDir() {
         story.then((rule) -> {

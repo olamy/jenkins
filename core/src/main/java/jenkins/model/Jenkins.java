@@ -38,7 +38,11 @@ import hudson.*;
 import hudson.Launcher.LocalLauncher;
 import jenkins.AgentProtocol;
 import jenkins.diagnostics.URICheckEncodingMonitor;
+import jenkins.security.stapler.DoActionFilter;
+import jenkins.security.stapler.StaplerFilteredActionListener;
+import jenkins.security.stapler.StaplerDispatchable;
 import jenkins.security.RedactSecretJsonInErrorMessageSanitizer;
+import jenkins.security.stapler.TypedFilter;
 import jenkins.util.SystemProperties;
 import hudson.cli.declarative.CLIMethod;
 import hudson.cli.declarative.CLIResolver;
@@ -899,6 +903,16 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
             webApp.setClassLoader(pluginManager.uberClassLoader);
             webApp.setJsonInErrorMessageSanitizer(RedactSecretJsonInErrorMessageSanitizer.INSTANCE);
 
+            TypedFilter typedFilter = new TypedFilter();
+            webApp.setFilterForGetMethods(typedFilter);
+            webApp.setFilterForFields(typedFilter);
+            webApp.setFilterForDoActions(new DoActionFilter());
+
+            StaplerFilteredActionListener actionListener = new StaplerFilteredActionListener();
+            webApp.setFilteredGetterTriggerListener(actionListener);
+            webApp.setFilteredDoActionTriggerListener(actionListener);
+            webApp.setFilteredFieldTriggerListener(actionListener);
+
             adjuncts = new AdjunctManager(servletContext, pluginManager.uberClassLoader,"adjuncts/"+SESSION_HASH, TimeUnit.DAYS.toMillis(365));
 
             ClassFilterImpl.register();
@@ -1647,6 +1661,7 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
         save();
     }
 
+    @StaplerDispatchable
     public FederatedLoginService getFederatedLoginService(String name) {
         for (FederatedLoginService fls : FederatedLoginService.all()) {
             if (fls.getUrlName().equals(name))
@@ -2572,6 +2587,7 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
      *
      * @since 1.349
      */
+    @StaplerDispatchable
     public ExtensionList getExtensionList(String extensionType) throws ClassNotFoundException {
         return getExtensionList(pluginManager.uberClassLoader.loadClass(extensionType));
     }
@@ -2941,6 +2957,7 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
     }
 
     // if no finger print matches, display "not found page".
+    @StaplerDispatchable
     public Object getFingerprint( String md5sum ) throws IOException {
         Fingerprint r = fingerprintMap.get(md5sum);
         if(r==null)     return new NoFingerprintMatch(md5sum);
@@ -4089,6 +4106,7 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
      * End point that intentionally throws an exception to test the error behaviour.
      * @since 1.467
      */
+    @StaplerDispatchable
     public void doException() {
         throw new RuntimeException();
     }
@@ -4283,8 +4301,6 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
     @RequirePOST
     public void doExit( StaplerRequest req, StaplerResponse rsp ) throws IOException {
         checkPermission(ADMINISTER);
-        LOGGER.info(String.format("Shutting down VM as requested by %s from %s",
-                getAuthentication().getName(), req!=null?req.getRemoteAddr():"???"));
         if (rsp!=null) {
             rsp.setStatus(HttpServletResponse.SC_OK);
             rsp.setContentType("text/plain");
@@ -4293,10 +4309,22 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
             }
         }
 
-        cleanUp();
-        System.exit(0);
-    }
+        new Thread("exit thread") {
+            @Override
+            public void run() {
+                try {
+                    ACL.impersonate(ACL.SYSTEM);
+                    LOGGER.info(String.format("Shutting down VM as requested by %s from %s",
+                            getAuthentication().getName(), req != null ? req.getRemoteAddr() : "???"));
 
+                    cleanUp();
+                    System.exit(0);
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "Failed to shut down Jenkins", e);
+                }
+            }
+        }.start();
+    }
 
     /**
      * Shutdown the system safely.
@@ -4637,6 +4665,7 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
      * Plugins who wish to contribute boxes on the side panel can add widgets
      * by {@code getWidgets().add(new MyWidget())} from {@link Plugin#start()}.
      */
+    @StaplerDispatchable // some plugins use this to add views to widgets
     public List<Widget> getWidgets() {
         return widgets;
     }
