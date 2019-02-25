@@ -53,6 +53,7 @@ import static org.hamcrest.Matchers.lessThan;
 import static org.junit.Assert.*;
 import static org.junit.Assume.*;
 
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.Issue;
@@ -163,7 +164,7 @@ public class ArtifactArchiverTest {
         assertFalse(kids[0].isDirectory());
         assertFalse(kids[0].isFile());
         assertFalse(kids[0].exists());
-        j.createWebClient().assertFails(b.getUrl() + "artifact/hack", HttpURLConnection.HTTP_NOT_FOUND);
+        j.createWebClient().assertFails(b.getUrl() + "artifact/hack", HttpURLConnection.HTTP_FORBIDDEN);
     }
 
     static class CreateArtifact extends TestBuilder {
@@ -291,6 +292,7 @@ public class ArtifactArchiverTest {
     }
 
     @Test @Issue("JENKINS-21905")
+    @Ignore("Infrastructure issues")
     public void archiveNotReadable() throws Exception {
         assumeFalse(Functions.isWindows()); // No permission support
 
