@@ -13,6 +13,9 @@
 // TEST FLAG - to make it easier to turn on/off unit tests for speeding up access to later stuff.
 def runTests = true
 
+// Release private signed war pipeline
+def RELEASE_PRIVATE_SIGNED_WAR = 'distributables/release/release-private-jenkins-signed-war'
+
 properties([buildDiscarder(logRotator(numToKeepStr: '15', artifactNumToKeepStr: '15'))])
 
 node('private-core-template-maven3.5.4') {
@@ -47,6 +50,16 @@ node('private-core-template-maven3.5.4') {
                     }
                 }
             }
+        }
+
+        // Release a new private core signed war
+        stage('Release') {
+            build job: 
+                RELEASE_PRIVATE_SIGNED_WAR,
+                parameters: [  string(name: 'BRANCH', value: env.BRANCH_NAME),
+                               booleanParam(name: 'skipTests', value: true),
+                               booleanParam(name: 'skipApproval', value: true)]
+                               // TODO: needs to include skipApproval as input parameter
         }
     }
 }
