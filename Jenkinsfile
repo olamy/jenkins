@@ -16,6 +16,16 @@ def runTests = true
 // Release private signed war pipeline
 def RELEASE_PRIVATE_SIGNED_WAR = 'distributables/release/release-private-jenkins-signed-war'
 
+// URR bump version and automated RFC pull request creation
+def branchName = UUID.randomUUID().toString()
+def cred = env.GITHUB_CREDENTIALS
+def configFile = """
+github.com:
+- user: cloudbeesrosieci
+  oauth_token: ${env.GITHUB_CREDENTIALS}
+  protocol: https
+"""  
+
 properties([buildDiscarder(logRotator(numToKeepStr: '15', artifactNumToKeepStr: '15'))])
 
 node('private-core-template-maven3.5.4') {
@@ -64,7 +74,35 @@ node('private-core-template-maven3.5.4') {
 
         // Generate a new PR against URR with bumped version
         stage('Bump version on URR') {
-            // TODO
+            dir("/root/.config"){
+               writeFile file: "hub", text: configFile
+            }
+           
+            sh """
+                wget https://github.com/github/hub/releases/download/v2.10.0/hub-linux-amd64-2.10.0.tgz
+                tar -xvzf hub-linux-amd64-2.10.0.tgz
+            """
+
+            // TODO: Obtain the jenkinsVersion and version params values
+            
+            dir("hub-linux-amd64-2.10.0/code") {
+                environment.withMavenSettings {
+                    git credentialsId: env.GITHUB_CREDENTIALS, url: 'https://github.com/cloudbees/unified-release.git'
+                    withCredentials([usernamePassword(credentialsId: cred, passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
+                        sh """
+                            git config user.name "${GIT_USERNAME}"
+                            git config user.email 'operations+cloudbeesrosieci@cloudbees.com'
+                            git checkout -b ${branchName}
+                            mvn versions:set-property -Dproperty=jenkins.version -DnewVersion=${jenkinsVersion}
+                            mvn versions:set -DnewVersion=${version}
+                            mvn envelope:validate
+                            git add .
+                            git commit -m '[automated] Bump version'
+                            ../bin/hub pull-request -m "Automated bump version"
+                        """
+                   }
+                }
+            }
         }
     }
 }
