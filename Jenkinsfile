@@ -61,5 +61,10 @@ node('private-core-template-maven3.5.4') {
                                booleanParam(name: 'skipApproval', value: true)]
                                // TODO: needs to include skipApproval as input parameter
         }
+
+        // Generate a new PR against URR with bumped version
+        stage('Bump version on URR') {
+            // TODO
+        }
     }
 }
