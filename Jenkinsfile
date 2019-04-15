@@ -17,6 +17,7 @@ def runTests = true
 def RELEASE_PRIVATE_SIGNED_WAR = 'distributables/release/release-private-jenkins-signed-war'
 
 // URR bump version and automated RFC pull request creation
+def urrBranch = "stable-"
 def branchName = UUID.randomUUID().toString()
 def cred = env.GITHUB_CREDENTIALS
 def configFile = """
@@ -24,7 +25,12 @@ github.com:
 - user: cloudbeesrosieci
   oauth_token: ${env.GITHUB_CREDENTIALS}
   protocol: https
-"""  
+"""
+
+// Jenkins version
+def jenkinsVersion = ""
+def version = ""
+
 
 properties([buildDiscarder(logRotator(numToKeepStr: '15', artifactNumToKeepStr: '15'))])
 
@@ -49,8 +55,14 @@ node('private-core-template-maven3.5.4') {
                         // Invoke the maven run within the environment we've created
                         withEnv(mvnEnv) {
                             // -Dmaven.repo.local=… tells Maven to create a subdir in the temporary directory for the local Maven repository
-                            def mvnCmd = "mvn -Pdebug -U clean verify ${runTests ? '-Dmaven.test.failure.ignore' : '-DskipTests'} -V -B -Dmaven.repo.local=$m2repo -s settings.xml -e"
-                            sh mvnCmd
+                            sh """
+                                mvn -Pdebug -U clean verify ${runTests ? '-Dmaven.test.failure.ignore' : '-DskipTests'} -V -B -Dmaven.repo.local=$m2repo -s settings.xml -e
+                                cp -a target/*.pom pom.xml
+                            """
+                            def pom = readMavenPom()
+                            jenkinsVersion = pom.version?.replaceAll('-SNAPSHOT', '')
+                            version = jenkinsVersion.replaceAll('-cb-','.') + '-SNAPSHOT'
+                            urrBranch += jenkinsVersion.substring(0,5)
                         }
                     }
                 } finally {
@@ -82,12 +94,11 @@ node('private-core-template-maven3.5.4') {
                 wget https://github.com/github/hub/releases/download/v2.10.0/hub-linux-amd64-2.10.0.tgz
                 tar -xvzf hub-linux-amd64-2.10.0.tgz
             """
-
-            // TODO: Obtain the jenkinsVersion and version params values
-            
+           
             dir("hub-linux-amd64-2.10.0/code") {
-                environment.withMavenSettings {
-                    git credentialsId: env.GITHUB_CREDENTIALS, url: 'https://github.com/cloudbees/unified-release.git'
+                 // Needed to get the envelope plugin
+                withMaven(mavenSettingsConfig: 'ci-release-jobs') {
+                    git credentialsId: env.GITHUB_CREDENTIALS, url: 'https://github.com/cloudbees/unified-release.git', branch: urrBranch
                     withCredentials([usernamePassword(credentialsId: cred, passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
                         sh """
                             git config user.name "${GIT_USERNAME}"
