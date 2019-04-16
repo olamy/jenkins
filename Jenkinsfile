@@ -74,7 +74,7 @@ node('private-core-template-maven3.5.4') {
         stage('Release') {
 		    cbpjcReleaseSign {
 		        branchName = env.BRANCH_NAME
-		        // TODO: needs to include skipApproval as input parameter
+		        skipApproval = true
 		    }
 		}
 
