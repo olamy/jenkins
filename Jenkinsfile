@@ -13,9 +13,6 @@
 // TEST FLAG - to make it easier to turn on/off unit tests for speeding up access to later stuff.
 def runTests = true
 
-// Release private signed war pipeline
-def RELEASE_PRIVATE_SIGNED_WAR = 'distributables/release/release-private-jenkins-signed-war'
-
 // URR bump version and automated RFC pull request creation
 def urrBranch = "stable-"
 def branchName = UUID.randomUUID().toString()
@@ -23,14 +20,13 @@ def cred = env.GITHUB_CREDENTIALS
 def configFile = """
 github.com:
 - user: cloudbeesrosieci
-  oauth_token: ${env.GITHUB_CREDENTIALS_TOKEN}
+  oauth_token: ${env.GITHUB_CREDENTIALS}
   protocol: https
 """
 
 // Jenkins version
 def jenkinsVersion = ""
 def version = ""
-
 
 properties([buildDiscarder(logRotator(numToKeepStr: '15', artifactNumToKeepStr: '15'))])
 
