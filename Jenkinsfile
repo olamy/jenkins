@@ -23,7 +23,7 @@ def cred = env.GITHUB_CREDENTIALS
 def configFile = """
 github.com:
 - user: cloudbeesrosieci
-  oauth_token: ${env.GITHUB_CREDENTIALS}
+  oauth_token: ${env.GITHUB_CREDENTIALS_TOKEN}
   protocol: https
 """
 
@@ -109,7 +109,7 @@ node('private-core-template-maven3.5.4') {
                             mvn envelope:validate
                             git add .
                             git commit -m '[automated] Bump version'
-                            ../bin/hub pull-request -m "Automated bump version"
+                            ../bin/hub pull-request -m "Automated bump version" -h cloudbeesrosieci:${branchName}
                         """
                    }
                 }
