@@ -96,7 +96,7 @@ node('private-core-template-maven3.5.4') {
                     git credentialsId: env.GITHUB_CREDENTIALS, url: 'https://github.com/cloudbees/unified-release.git', branch: urrBranch
                     withCredentials([usernamePassword(credentialsId: cred, passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
                         sh """
-							git config user.name "${GIT_USERNAME}"
+			    git config user.name "${GIT_USERNAME}"
                             git config user.email 'operations+cloudbeesrosieci@cloudbees.com'
                             git checkout -b ${branchName}
                             git remote set-url origin https://\${GIT_USERNAME}:\${GIT_PASSWORD}@github.com/cloudbees/unified-release.git
