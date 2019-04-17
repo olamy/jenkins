@@ -21,7 +21,7 @@ def token = getToken(cred)
 def configFile = """
 github.com:
 - user: cloudbeesrosieci
-  oauth_token: ${env.GITHUB_CREDENTIALS}
+  oauth_token: ${token}
   protocol: https
 """
 
