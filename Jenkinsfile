@@ -17,6 +17,7 @@ def runTests = true
 def urrBranch = "stable-"
 def branchName = UUID.randomUUID().toString()
 def cred = env.GITHUB_CREDENTIALS
+def token = getToken(cred)
 def configFile = """
 github.com:
 - user: cloudbeesrosieci
@@ -95,19 +96,37 @@ node('private-core-template-maven3.5.4') {
                     git credentialsId: env.GITHUB_CREDENTIALS, url: 'https://github.com/cloudbees/unified-release.git', branch: urrBranch
                     withCredentials([usernamePassword(credentialsId: cred, passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
                         sh """
-                            git config user.name "${GIT_USERNAME}"
+							git config user.name "${GIT_USERNAME}"
                             git config user.email 'operations+cloudbeesrosieci@cloudbees.com'
                             git checkout -b ${branchName}
+                            git remote set-url origin https://\${GIT_USERNAME}:\${GIT_PASSWORD}@github.com/cloudbees/unified-release.git
                             mvn versions:set-property -Dproperty=jenkins.version -DnewVersion=${jenkinsVersion}
                             mvn versions:set -DnewVersion=${version}
                             mvn envelope:validate
                             git add .
                             git commit -m '[automated] Bump version'
-                            ../bin/hub pull-request -m "Automated bump version" -h cloudbeesrosieci:${branchName}
+                            git push origin ${branchName}
+                            ../bin/hub pull-request -m "Automated bump version" -b cloudbees:${urrBranch} -h cloudbees:${branchName}
                         """
                    }
                 }
             }
         }
     }
+}
+
+def getToken(credentialId) {
+    def creds = com.cloudbees.plugins.credentials.CredentialsProvider.lookupCredentials(
+        com.cloudbees.plugins.credentials.common.StandardUsernameCredentials.class,
+        Jenkins.instance,
+        null,
+        null
+    );
+    for (c in credentials) {
+        if (c.id == credentialId) {
+            return c.password
+        }
+    }
+    
+    return null
 }
