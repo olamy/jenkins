@@ -73,11 +73,11 @@ node('private-core-template-maven3.5.4') {
 
         // Release a new private core signed war
         stage('Release') {
-		    cbpjcReleaseSign {
-		        branchName = env.BRANCH_NAME
-		        skipApproval = true
-		    }
-		}
+	    cbpjcReleaseSign {
+	        branchName = env.BRANCH_NAME
+	        skipApproval = true
+	    }
+	}
 
         // Generate a new PR against URR with bumped version
         stage('Bump version on URR') {
