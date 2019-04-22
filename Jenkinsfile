@@ -116,7 +116,7 @@ node('private-core-template-maven3.5.4') {
 }
 
 def getToken(credentialId) {
-    def creds = com.cloudbees.plugins.credentials.CredentialsProvider.lookupCredentials(
+    def credentials = com.cloudbees.plugins.credentials.CredentialsProvider.lookupCredentials(
         com.cloudbees.plugins.credentials.common.StandardUsernameCredentials.class,
         Jenkins.instance,
         null,
