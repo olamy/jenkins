@@ -221,7 +221,7 @@ public class RobustReflectionConverterTest {
             r.jenkins.reload();
             
             p = r.jenkins.getItemByFullName(p.getFullName(), FreeStyleProject.class);
-            assertEquals("badvalue", p.getProperty(KeywordProperty.class).getNonCriticalField().getKeyword());
+            assertNull(p.getProperty(KeywordProperty.class).getNonCriticalField());
             assertEquals(AcceptOnlySpecificKeyword.ACCEPT_KEYWORD, p.getProperty(KeywordProperty.class).getCriticalField().getKeyword());
         }
         
@@ -245,7 +245,7 @@ public class RobustReflectionConverterTest {
             
             Page page = wc.getPage(req);
             assertEquals("Submitting unacceptable configuration via REST should fail.", 
-                    HttpURLConnection.HTTP_INTERNAL_ERROR,
+                    HttpURLConnection.HTTP_BAD_REQUEST,
                     page.getWebResponse().getStatusCode());
             
             // Configuration should not be updated for a failure of the critical field,
@@ -296,7 +296,7 @@ public class RobustReflectionConverterTest {
             r.jenkins.reload();
             
             p = r.jenkins.getItemByFullName(p.getFullName(), FreeStyleProject.class);
-            assertEquals("badvalue", p.getProperty(KeywordProperty.class).getNonCriticalField().getKeyword());
+            assertNull(p.getProperty(KeywordProperty.class).getNonCriticalField());
         }
         
         // with addCriticalField. This is not accepted.

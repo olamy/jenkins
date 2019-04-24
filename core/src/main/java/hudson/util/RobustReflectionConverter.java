@@ -23,6 +23,7 @@
  */
 package hudson.util;
 
+import com.google.common.collect.ImmutableList;
 import com.thoughtworks.xstream.XStreamException;
 import com.thoughtworks.xstream.converters.ConversionException;
 import com.thoughtworks.xstream.converters.Converter;
@@ -44,20 +45,28 @@ import hudson.model.Saveable;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import static java.util.logging.Level.WARNING;
 import static java.util.logging.Level.FINE;
+
 import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.GuardedBy;
+
+import hudson.util.xstream.ConversionSecurityException;
 import jenkins.util.xstream.CriticalXStreamException;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 
 /**
  * Custom {@link ReflectionConverter} that handle errors more gracefully.
@@ -71,6 +80,12 @@ import jenkins.util.xstream.CriticalXStreamException;
  *
  */
 public class RobustReflectionConverter implements Converter {
+
+    @Restricted(NoExternalUse.class)
+    public static final List<Class<? extends Throwable>> SECURITY_EXCEPTIONS = ImmutableList.of(java.lang.SecurityException.class,
+            org.acegisecurity.AccessDeniedException.class, ConversionSecurityException.class);
+    private static final Set<Class<? extends Throwable>> CRITICAL_EXCEPTIONS = new CopyOnWriteArraySet<>();
+    static final String DISABLE_CRITICAL_EXCEPTIONS_PROPERTY_NAME = RobustReflectionConverter.class.getName() + ".DISABLE_CRITICAL_EXCEPTIONS";
 
     protected final ReflectionProvider reflectionProvider;
     protected final Mapper mapper;
@@ -87,9 +102,14 @@ public class RobustReflectionConverter implements Converter {
     @GuardedBy("criticalFieldsLock")
     private final Map<String, Set<String>> criticalFields = new HashMap<String, Set<String>>();
 
+    static {
+        loadInitialCriticalExceptions();
+    }
+
     public RobustReflectionConverter(Mapper mapper, ReflectionProvider reflectionProvider) {
         this(mapper, reflectionProvider, new XStream2().new PluginClassOwnership());
     }
+
     RobustReflectionConverter(Mapper mapper, ReflectionProvider reflectionProvider, XStream2.ClassOwnership classOwnership) {
         this.mapper = mapper;
         this.reflectionProvider = reflectionProvider;
@@ -112,6 +132,12 @@ public class RobustReflectionConverter implements Converter {
         finally {
             // Unlock
             criticalFieldsLock.writeLock().unlock();
+        }
+    }
+
+    static void addCriticalException(Class<? extends Throwable> exceptionClass) {
+        if (!criticalExceptionsDisabled()) {
+            CRITICAL_EXCEPTIONS.add(exceptionClass);
         }
     }
     
@@ -368,19 +394,38 @@ public class RobustReflectionConverter implements Converter {
 
         // Report any class/field errors in Saveable objects
         if (context.get("ReadError") != null && context.get("Saveable") == result) {
-            OldDataMonitor.report((Saveable)result, (ArrayList<Throwable>)context.get("ReadError"));
+            OldDataMonitor.report((Saveable)result, (ArrayList<Throwable>) context.get("ReadError"));
             context.put("ReadError", null);
         }
         return result;
     }
 
     public static void addErrorInContext(UnmarshallingContext context, Throwable e) {
+        Optional<Throwable> criticalException = containsExceptionOrCause(e, CRITICAL_EXCEPTIONS);
+        if (criticalException.isPresent()) {
+            LOGGER.log(WARNING, "Conversion encountered a critical exception.", criticalException.get());
+            throw new RuntimeException(criticalException.get());
+        }
         LOGGER.log(FINE, "Failed to load", e);
         ArrayList<Throwable> list = (ArrayList<Throwable>)context.get("ReadError");
         if (list == null)
             context.put("ReadError", list = new ArrayList<Throwable>());
         list.add(e);
     }
+
+    @Restricted(NoExternalUse.class)
+    public static Optional<Throwable> containsExceptionOrCause(Throwable e, Collection<Class<? extends Throwable>> exceptions) {
+        Throwable error = e;
+        do {
+            for (Class<? extends Throwable> criticalException : exceptions) {
+                if (criticalException.isInstance(error)) {
+                    return Optional.of(error);
+                }
+            }
+            error = error.getCause();
+        } while (error != null);
+        return Optional.empty();
+     }
 
     private boolean fieldDefinedInClass(Object result, String attrName) {
         // during unmarshalling, unmarshal into transient fields like XStream 1.1.3
@@ -486,6 +531,18 @@ public class RobustReflectionConverter implements Converter {
             super(msg);
             add("duplicate-field", msg);
         }
+    }
+
+    static void loadInitialCriticalExceptions() {
+        CRITICAL_EXCEPTIONS.clear();
+
+        if (!criticalExceptionsDisabled()) {
+            CRITICAL_EXCEPTIONS.addAll(SECURITY_EXCEPTIONS);
+        }
+    }
+
+    private static Boolean criticalExceptionsDisabled() {
+        return Boolean.getBoolean(DISABLE_CRITICAL_EXCEPTIONS_PROPERTY_NAME);
     }
 
     private static final Logger LOGGER = Logger.getLogger(RobustReflectionConverter.class.getName());
