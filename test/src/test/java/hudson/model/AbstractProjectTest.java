@@ -491,13 +491,7 @@ public class AbstractProjectTest {
         FreeStyleProject p = j.createFreeStyleProject();
 
         HttpURLConnection con = postConfigDotXml(p, "<maven2-moduleset />");
-
-        // this should fail with a type mismatch error
-        // the error message should report both what was submitted and what was expected
-        assertEquals(500, con.getResponseCode());
-        String msg = IOUtils.toString(con.getErrorStream());
-        System.out.println(msg);
-        assertThat(msg, allOf(containsString(FreeStyleProject.class.getName()), containsString(MavenModuleSet.class.getName())));
+        assertEquals(400, con.getResponseCode());
 
         // control. this should work
         con = postConfigDotXml(p, "<project />");

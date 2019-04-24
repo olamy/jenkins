@@ -29,7 +29,9 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.Launcher.ProcStarter;
+import hudson.security.AccessDeniedException2;
 import hudson.slaves.Cloud;
+import hudson.util.RobustReflectionConverter;
 import jenkins.security.stapler.StaplerDispatchable;
 import jenkins.util.SystemProperties;
 import hudson.Util;
@@ -70,6 +72,7 @@ import jenkins.util.SystemProperties;
 import jenkins.security.MasterToSlaveCallable;
 import jenkins.security.ImpersonatingExecutorService;
 
+import org.acegisecurity.AccessDeniedException;
 import org.apache.commons.lang.StringUtils;
 import org.jenkins.ui.icon.Icon;
 import org.jenkins.ui.icon.IconSet;
@@ -100,6 +103,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
@@ -1516,8 +1522,18 @@ public /*transient*/ abstract class Computer extends Actionable implements Acces
         }
         if (req.getMethod().equals("POST")) {
             // submission
-            updateByXml(req.getInputStream());
-            return;
+            try {
+                updateByXml(req.getInputStream());
+                return;
+            } catch (Exception ex) {
+                Optional<? extends Throwable> securityException = RobustReflectionConverter.containsExceptionOrCause(ex, RobustReflectionConverter.SECURITY_EXCEPTIONS);
+                if (securityException.isPresent()) {
+                    if (securityException.get() instanceof AccessDeniedException) {
+                        throw (AccessDeniedException)securityException.get();
+                    }
+                    throw new AccessDeniedException("Operation forbidden.", securityException.get());
+                }
+            }
         }
 
         // huh?
@@ -1531,8 +1547,18 @@ public /*transient*/ abstract class Computer extends Actionable implements Acces
      */
     public void updateByXml(final InputStream source) throws IOException, ServletException {
         checkPermission(CONFIGURE);
+        verifyUserCanReadExistingConfig();
         Node result = (Node)Jenkins.XSTREAM2.fromXML(source);
         Jenkins.getInstance().getNodesObject().replaceNode(this.getNode(), result);
+    }
+
+    private void verifyUserCanReadExistingConfig() {
+        // Make sure the user can read the existing config. Otherwise, we could have a situation
+        // where they could update it but not read it, which can have security issues.
+        Path configFilePath = Paths.get(Jenkins.getInstance().getRootDir().getAbsolutePath(), "nodes", getName(), "config.xml");
+        if (Files.exists(configFilePath)) {
+            Jenkins.XSTREAM2.fromXML(configFilePath.toFile());
+        }
     }
 
     /**
