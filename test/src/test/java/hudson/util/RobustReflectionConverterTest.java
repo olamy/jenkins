@@ -221,7 +221,7 @@ public class RobustReflectionConverterTest {
             r.jenkins.reload();
             
             p = r.jenkins.getItemByFullName(p.getFullName(), FreeStyleProject.class);
-            assertEquals("badvalue", p.getProperty(KeywordProperty.class).getNonCriticalField().getKeyword());
+            assertNull(p.getProperty(KeywordProperty.class).getNonCriticalField());
             assertEquals(AcceptOnlySpecificKeyword.ACCEPT_KEYWORD, p.getProperty(KeywordProperty.class).getCriticalField().getKeyword());
         }
         
@@ -297,7 +297,7 @@ public class RobustReflectionConverterTest {
             r.jenkins.reload();
             
             p = r.jenkins.getItemByFullName(p.getFullName(), FreeStyleProject.class);
-            assertEquals("badvalue", p.getProperty(KeywordProperty.class).getNonCriticalField().getKeyword());
+            assertNull(p.getProperty(KeywordProperty.class).getNonCriticalField());
         }
         
         // with addCriticalField. This is not accepted.
