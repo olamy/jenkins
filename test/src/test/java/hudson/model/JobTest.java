@@ -224,11 +224,11 @@ public class JobTest {
             
             // Has CONFIGURE and EXTENDED_READ permission
             wc.withBasicApiToken(User.getById("alice", true));  
-            tryConfigDotXml(wc, HttpURLConnection.HTTP_INTERNAL_ERROR, "Both perms; should get 500");
+            tryConfigDotXml(wc, HttpURLConnection.HTTP_BAD_REQUEST, "Both perms; should get 400");
 
             // Has only CONFIGURE permission (this should imply EXTENDED_READ)
             wc.withBasicApiToken(User.getById("bob", true));  
-            tryConfigDotXml(wc, HttpURLConnection.HTTP_INTERNAL_ERROR, "Config perm should imply EXTENDED_READ");
+            tryConfigDotXml(wc, HttpURLConnection.HTTP_BAD_REQUEST, "Config perm should imply EXTENDED_READ");
 
             // Has only EXTENDED_READ permission
             wc.withBasicApiToken(User.getById("charlie", true));  
@@ -244,7 +244,7 @@ public class JobTest {
         assertEquals("Retrieving config.xml should be ok", HttpURLConnection.HTTP_OK, p.getWebResponse().getStatusCode());
         
         // This page is a simple form to POST to /job/testJob/config.xml
-        // But it posts invalid data so we expect 500 if we have permission, 403 if not
+        // But it posts invalid data so we expect 400 if we have permission, 403 if not
         HtmlPage page = wc.goTo("userContent/post.html");
         p = HtmlFormUtil.submit(page.getForms().get(0));
         assertEquals(msg, status, p.getWebResponse().getStatusCode());

@@ -52,6 +52,7 @@ import hudson.PluginWrapper;
 import hudson.XmlFile;
 import hudson.diagnosis.OldDataMonitor;
 import hudson.remoting.ClassFilter;
+import hudson.util.xstream.ConversionSecurityException;
 import hudson.util.xstream.ImmutableSetConverter;
 import hudson.util.xstream.ImmutableSortedSetConverter;
 import jenkins.util.xstream.SafeURLConverter;
@@ -62,6 +63,9 @@ import hudson.model.Saveable;
 import hudson.util.xstream.ImmutableListConverter;
 import hudson.util.xstream.ImmutableMapConverter;
 import hudson.util.xstream.MapperDelegate;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -226,6 +230,15 @@ public class XStream2 extends XStream {
      */
     public void addCriticalField(Class<?> clazz, String field) {
         reflectionConverter.addCriticalField(clazz, field);
+    }
+
+    /**
+     * Specifies that a given exception should not be swallowed by {@link RobustCollectionConverter}.
+     * @param clazz the critical exception class
+     * @since TODO
+     */
+    void addCriticalException(Class<? extends Throwable> clazz) {
+        reflectionConverter.addCriticalException(clazz);
     }
 
     static String trimVersion(String version) {
@@ -543,12 +556,12 @@ public class XStream2 extends XStream {
     private static class BlacklistedTypesConverter implements Converter {
         @Override
         public void marshal(Object source, HierarchicalStreamWriter writer, MarshallingContext context) {
-            throw new UnsupportedOperationException("Refusing to marshal " + source.getClass().getName() + " for security reasons; see https://jenkins.io/redirect/class-filter/");
+            throw new ConversionSecurityException("Refusing to marshal " + source.getClass().getName() + " for security reasons; see https://jenkins.io/redirect/class-filter/");
         }
 
         @Override
         public Object unmarshal(HierarchicalStreamReader reader, UnmarshallingContext context) {
-            throw new ConversionException("Refusing to unmarshal " + reader.getNodeName() + " for security reasons; see https://jenkins.io/redirect/class-filter/");
+            throw new ConversionSecurityException("Refusing to unmarshal " + reader.getNodeName() + " for security reasons; see https://jenkins.io/redirect/class-filter/");
         }
 
         /** TODO see comment in {@code whitelisted-classes.txt} */
