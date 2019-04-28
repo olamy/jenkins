@@ -86,6 +86,26 @@ public class ComputerConfigDotXmlTest {
         SecurityContextHolder.setContext(oldSecurityContext);
     }
 
+    @Test(expected = AccessDeniedException2.class)
+    public void configXmlGetShouldFailForUnauthorized() throws Exception {
+
+        when(req.getMethod()).thenReturn("GET");
+
+        rule.jenkins.setAuthorizationStrategy(new GlobalMatrixAuthorizationStrategy());
+
+        computer.doConfigDotXml(req, rsp);
+    }
+
+    @Test(expected = AccessDeniedException2.class)
+    public void configXmlPostShouldFailForUnauthorized() throws Exception {
+
+        when(req.getMethod()).thenReturn("POST");
+
+        rule.jenkins.setAuthorizationStrategy(new GlobalMatrixAuthorizationStrategy());
+
+        computer.doConfigDotXml(req, rsp);
+    }
+
     @Test
     public void configXmlGetShouldYieldNodeConfiguration() throws Exception {
 

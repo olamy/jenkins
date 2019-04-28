@@ -24,7 +24,6 @@
  */
 package hudson.model;
 
-import com.google.common.collect.ImmutableList;
 import com.infradna.tool.bridge_method_injector.WithBridgeMethods;
 import hudson.AbortException;
 import hudson.XmlFile;
@@ -39,29 +38,24 @@ import hudson.model.queue.Tasks;
 import hudson.model.queue.WorkUnit;
 import hudson.security.ACLContext;
 import hudson.security.AccessControlled;
+import hudson.security.Permission;
 import hudson.security.ACL;
 import hudson.util.AlternativeUiTextProvider;
 import hudson.util.AlternativeUiTextProvider.Message;
 import hudson.util.AtomicFileWriter;
 import hudson.util.FormValidation;
 import hudson.util.IOUtils;
-import hudson.util.RobustReflectionConverter;
 import hudson.util.Secret;
-
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-
-import hudson.util.xstream.ConversionSecurityException;
 import jenkins.model.DirectlyModifiableTopLevelItemGroup;
 import jenkins.model.Jenkins;
 import jenkins.model.queue.ItemDeletion;
 import jenkins.security.NotReallyRoleSensitiveCallable;
 import jenkins.util.xml.XMLUtils;
 
-import org.acegisecurity.AccessDeniedException;
 import org.apache.tools.ant.taskdefs.Copy;
 import org.apache.tools.ant.types.FileSet;
 import org.kohsuke.stapler.HttpResponses;
@@ -104,7 +98,6 @@ import javax.xml.transform.stream.StreamSource;
 import static hudson.model.queue.Executables.getParentOf;
 import hudson.model.queue.SubTask;
 import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
-import static javax.servlet.http.HttpServletResponse.SC_FORBIDDEN;
 import static javax.servlet.http.HttpServletResponse.SC_NOT_FOUND;
 
 import org.apache.commons.io.FileUtils;
@@ -605,12 +598,8 @@ public abstract class AbstractItem extends Actionable implements Item, HttpDelet
      */
     public synchronized void save() throws IOException {
         if(BulkChange.contains(this))   return;
-        saveThis(getConfigFile());
+        getConfigFile().write(this);
         SaveableListener.fireOnChange(this, getConfigFile());
-    }
-
-    private synchronized void saveThis(XmlFile configFile) throws IOException {
-        configFile.write(this);
     }
 
     public final XmlFile getConfigFile() {
@@ -817,18 +806,8 @@ public abstract class AbstractItem extends Actionable implements Item, HttpDelet
         }
         if (req.getMethod().equals("POST")) {
             // submission
-            try {
-                updateByXml((Source) new StreamSource(req.getReader()));
-                return;
-            } catch (Exception ex) {
-                Optional<? extends Throwable> securityException = RobustReflectionConverter.containsExceptionOrCause(ex, RobustReflectionConverter.SECURITY_EXCEPTIONS);
-                if (securityException.isPresent()) {
-                    if (securityException.get() instanceof AccessDeniedException) {
-                        throw (AccessDeniedException) securityException.get();
-                    }
-                    throw new AccessDeniedException("Operation forbidden.", securityException.get());
-                }
-            }
+            updateByXml((Source)new StreamSource(req.getReader()));
+            return;
         }
 
         // huh?
@@ -880,11 +859,7 @@ public abstract class AbstractItem extends Actionable implements Item, HttpDelet
      */
     public void updateByXml(Source source) throws IOException {
         checkPermission(CONFIGURE);
-        // Make sure the user can read the config. Otherwise, we could have a situation
-        // where they could update it but not read it, which can have security issues.
         XmlFile configXmlFile = getConfigFile();
-        getConfigFile().read();
-
         final AtomicFileWriter out = new AtomicFileWriter(configXmlFile.getFile());
         try {
             try {
@@ -893,8 +868,6 @@ public abstract class AbstractItem extends Actionable implements Item, HttpDelet
             } catch (TransformerException | SAXException e) {
                 throw new IOException("Failed to persist config.xml", e);
             }
-
-            reloadFromConfigAndSaveTransformed(out);
 
             // try to reflect the changes by reloading
             Object o = new XmlFile(Items.XSTREAM, out.getTemporaryFile()).unmarshalNullingOut(this);
@@ -919,12 +892,6 @@ public abstract class AbstractItem extends Actionable implements Item, HttpDelet
         } finally {
             out.abort(); // don't leave anything behind
         }
-    }
-
-    private void reloadFromConfigAndSaveTransformed(AtomicFileWriter out) throws IOException {
-        AbstractItem item = (AbstractItem) new XmlFile(Items.XSTREAM, out.getTemporaryFile()).read();
-        XmlFile temporaryOutput = new XmlFile(Items.XSTREAM, out.getTemporaryFile());
-        item.saveThis(temporaryOutput);
     }
 
     /**
