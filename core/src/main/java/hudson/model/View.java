@@ -51,7 +51,6 @@ import hudson.util.DescribableList;
 import hudson.util.DescriptorList;
 import hudson.util.FormApply;
 import hudson.util.FormValidation;
-import hudson.util.RobustReflectionConverter;
 import hudson.util.RunList;
 import hudson.util.XStream2;
 import hudson.views.ListViewColumn;
@@ -71,7 +70,6 @@ import jenkins.util.xml.XMLUtils;
 import net.sf.json.JSON;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
-import org.acegisecurity.AccessDeniedException;
 import org.apache.commons.jelly.JellyContext;
 import org.apache.commons.lang.StringUtils;
 import org.apache.tools.ant.filters.StringInputStream;
@@ -96,8 +94,6 @@ import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -115,7 +111,6 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -1172,19 +1167,9 @@ public abstract class View extends AbstractModelObject implements AccessControll
             };
         }
         if (req.getMethod().equals("POST")) {
-            try {
-                // submission
-                updateByXml(new StreamSource(req.getReader()));
-                return HttpResponses.ok();
-            } catch (Exception ex) {
-                Optional<? extends Throwable> securityException = RobustReflectionConverter.containsExceptionOrCause(ex, RobustReflectionConverter.SECURITY_EXCEPTIONS);
-                if (securityException.isPresent()) {
-                    if (securityException.get() instanceof AccessDeniedException) {
-                        throw (AccessDeniedException)securityException.get();
-                    }
-                    throw new AccessDeniedException("Operation forbidden.", securityException.get());
-                }
-            }
+            // submission
+            updateByXml(new StreamSource(req.getReader()));
+            return HttpResponses.ok();
         }
 
         // huh?
@@ -1209,7 +1194,6 @@ public abstract class View extends AbstractModelObject implements AccessControll
      */
     public void updateByXml(Source source) throws IOException {
         checkPermission(CONFIGURE);
-        verifyUserCanReadExistingConfig();
         StringWriter out = new StringWriter();
         try {
             // this allows us to use UTF-8 for storing data,
@@ -1241,18 +1225,6 @@ public abstract class View extends AbstractModelObject implements AccessControll
             throw new IOException("Unable to read",e);
         }
         save();
-    }
-
-    private void verifyUserCanReadExistingConfig() {
-        // Make sure the user can read the existing config. Otherwise, we could have a situation
-        // where they could update it but not read it, which can have security issues.
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try {
-            writeXml(baos);
-            Jenkins.XSTREAM2.fromXML(new ByteArrayInputStream(baos.toByteArray()));
-        } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Error handling byte array streams.", e);
-        }
     }
 
     public ModelObjectWithContextMenu.ContextMenu doChildrenContextMenu(StaplerRequest request, StaplerResponse response) throws Exception {

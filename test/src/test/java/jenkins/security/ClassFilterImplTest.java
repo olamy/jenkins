@@ -146,9 +146,10 @@ public class ClassFilterImplTest {
         config.unrelated = null;
         config.load();
         assertNull(config.obj);
-        assertNull(config.unrelated);
+        assertEquals("modified", config.unrelated);
         Map<Saveable, OldDataMonitor.VersionRange> data = ExtensionList.lookupSingleton(OldDataMonitor.class).getData();
-        assertThat(data, equalTo(Collections.EMPTY_MAP));
+        assertEquals(Collections.singleton(config), data.keySet());
+        assertThat(data.values().iterator().next().extra, allOf(containsString("LinkedListMultimap"), containsString("https://jenkins.io/redirect/class-filter/")));
     }
 
     @Test
