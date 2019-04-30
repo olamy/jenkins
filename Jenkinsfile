@@ -18,12 +18,6 @@ def urrBranch = "stable-"
 def branchName = UUID.randomUUID().toString()
 def cred = env.GITHUB_CREDENTIALS
 def token = getToken(cred)
-def configFile = """
-github.com:
-- user: cloudbeesrosieci
-  oauth_token: ${token}
-  protocol: https
-"""
 
 // Jenkins version
 def jenkinsVersion = ""
@@ -73,44 +67,21 @@ node('private-core-template-maven3.5.4') {
 
         // Release a new private core signed war
         stage('Release') {
-	    cbpjcReleaseSign {
-	        branchName = env.BRANCH_NAME
-	        skipApproval = true
-	    }
-	}
+	   cbpjcReleaseSign {
+                branchName = env.BRANCH_NAME
+                skipApproval = true
+           }
+        }
 
         // Generate a new PR against URR with bumped version
         stage('Bump version on URR') {
-            dir("/root/.config"){
-               writeFile file: "hub", text: configFile
-            }
-           
-            sh """
-                wget https://github.com/github/hub/releases/download/v2.10.0/hub-linux-amd64-2.10.0.tgz
-                tar -xvzf hub-linux-amd64-2.10.0.tgz
-            """
-           
-            dir("hub-linux-amd64-2.10.0/code") {
-                 // Needed to get the envelope plugin
-                withMaven(mavenSettingsConfig: 'ci-release-jobs') {
-                    git credentialsId: env.GITHUB_CREDENTIALS, url: 'https://github.com/cloudbees/unified-release.git', branch: urrBranch
-                    withCredentials([usernamePassword(credentialsId: cred, passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
-                        sh """
-			    git config user.name "${GIT_USERNAME}"
-                            git config user.email 'operations+cloudbeesrosieci@cloudbees.com'
-                            git checkout -b ${branchName}
-                            git remote set-url origin https://\${GIT_USERNAME}:\${GIT_PASSWORD}@github.com/cloudbees/unified-release.git
-                            mvn versions:set-property -Dproperty=jenkins.version -DnewVersion=${jenkinsVersion}
-                            mvn versions:set -DnewVersion=${version}
-                            mvn envelope:validate
-                            git add .
-                            git commit -m '[automated] Bump version'
-                            git push origin ${branchName}
-                            ../bin/hub pull-request -m "Automated bump version" -b cloudbees:${urrBranch} -h cloudbees:${branchName}
-                        """
-                   }
-                }
-            }
+            pullRequest(
+                destinationBranchName: urrBranch,
+                url: 'https://github.com/cloudbees/unified-release.git', 
+                commands: 'mvn versions:set-property -Dproperty=jenkins.version -DnewVersion=${jenkinsVersion} && mvn versions:set -DnewVersion=${version} && mvn envelope:validate',
+                message: 'Automated bump version',
+                token: token
+            )
         }
     }
 }
