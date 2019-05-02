@@ -13,6 +13,19 @@
 // TEST FLAG - to make it easier to turn on/off unit tests for speeding up access to later stuff.
 def runTests = true
 
+// URR bump version and automated RFC pull request creation
+def urrBranch = "stable-"
+def branchName = UUID.randomUUID().toString()
+def cred = env.GITHUB_CREDENTIALS
+def token = getToken(cred)
+
+// Jenkins version
+def jenkinsVersion = ""
+def version = ""
+
+// Bump commands
+def commands = ""
+
 properties([buildDiscarder(logRotator(numToKeepStr: '15', artifactNumToKeepStr: '15'))])
 
 node('private-core-template-maven3.5.4') {
@@ -36,8 +49,15 @@ node('private-core-template-maven3.5.4') {
                         // Invoke the maven run within the environment we've created
                         withEnv(mvnEnv) {
                             // -Dmaven.repo.local=… tells Maven to create a subdir in the temporary directory for the local Maven repository
-                            def mvnCmd = "mvn -Pdebug -U clean verify ${runTests ? '-Dmaven.test.failure.ignore' : '-DskipTests'} -V -B -Dmaven.repo.local=$m2repo -s settings.xml -e"
-                            sh mvnCmd
+                            sh """
+                                mvn -Pdebug -U clean verify ${runTests ? '-Dmaven.test.failure.ignore' : '-DskipTests'} -V -B -Dmaven.repo.local=$m2repo -s settings.xml -e
+                                cp -a target/*.pom pom.xml
+                            """
+                            def pom = readMavenPom()
+                            jenkinsVersion = pom.version?.replaceAll('-SNAPSHOT', '')
+                            version = jenkinsVersion.replaceAll('-cb-','.') + '-SNAPSHOT'
+                            urrBranch += jenkinsVersion.substring(0,5)
+                            commands = 'mvn versions:set-property -Dproperty=jenkins.version -DnewVersion=' + jenkinsVersion + ' && mvn versions:set -DnewVersion=' + version + ' && mvn envelope:validate'
                         }
                     }
                 } finally {
@@ -48,5 +68,41 @@ node('private-core-template-maven3.5.4') {
                 }
             }
         }
+
+        // Release a new private core signed war
+        stage('Release') {
+	   cbpjcReleaseSign {
+                branchName = env.BRANCH_NAME
+                skipApproval = true
+           }
+        }
+
+        // Generate a new PR against URR with bumped version
+        stage('Bump version on URR') {
+            pullRequest(
+		branchName: branchName,
+                destinationBranchName: urrBranch,
+                url: 'https://github.com/cloudbees/unified-release.git', 
+                commands: commands,
+                message: 'Automated bump version',
+                token: token
+            )
+        }
     }
+}
+
+def getToken(credentialId) {
+    def credentials = com.cloudbees.plugins.credentials.CredentialsProvider.lookupCredentials(
+        com.cloudbees.plugins.credentials.common.StandardUsernameCredentials.class,
+        Jenkins.instance,
+        null,
+        null
+    );
+    for (c in credentials) {
+        if (c.id == credentialId) {
+            return c.password
+        }
+    }
+    
+    return null
 }
