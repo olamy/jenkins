@@ -23,6 +23,9 @@ def token = getToken(cred)
 def jenkinsVersion = ""
 def version = ""
 
+// Bump commands
+def commands = ""
+
 properties([buildDiscarder(logRotator(numToKeepStr: '15', artifactNumToKeepStr: '15'))])
 
 node('private-core-template-maven3.5.4') {
@@ -54,6 +57,7 @@ node('private-core-template-maven3.5.4') {
                             jenkinsVersion = pom.version?.replaceAll('-SNAPSHOT', '')
                             version = jenkinsVersion.replaceAll('-cb-','.') + '-SNAPSHOT'
                             urrBranch += jenkinsVersion.substring(0,5)
+                            commands = 'mvn versions:set-property -Dproperty=jenkins.version -DnewVersion=' + jenkinsVersion + ' && mvn versions:set -DnewVersion=' + version + ' && mvn envelope:validate'
                         }
                     }
                 } finally {
@@ -79,7 +83,7 @@ node('private-core-template-maven3.5.4') {
 		branchName: branchName,
                 destinationBranchName: urrBranch,
                 url: 'https://github.com/cloudbees/unified-release.git', 
-                commands: 'mvn versions:set-property -Dproperty=jenkins.version -DnewVersion=${jenkinsVersion} && mvn versions:set -DnewVersion=${version} && mvn envelope:validate',
+                commands: commands,
                 message: 'Automated bump version',
                 token: token
             )
