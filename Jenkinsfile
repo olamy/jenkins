@@ -115,5 +115,5 @@ boolean isPR() {
 }
 
 boolean isNotMaster() {
-    return env.BRANCH_NAME.startsWith('cb-')
+    return (env.BRANCH_NAME.startsWith('cb-') && !env.BRANCH_NAME.equals('cb-master'))
 }
