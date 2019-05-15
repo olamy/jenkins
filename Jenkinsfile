@@ -69,7 +69,7 @@ node('private-core-template-maven3.5.4') {
             }
         }
 
-        if(!isPR()) {
+        if(!isPR() && isNotMaster()) {
 
             // Release a new private core signed war
             stage('Release') {
@@ -112,4 +112,8 @@ def getToken(credentialId) {
 
 boolean isPR() {
     return (env.BRANCH_NAME.startsWith('PR-') && env.CHANGE_TARGET != null)
+}
+
+boolean isNotMaster() {
+    return env.BRANCH_NAME.startsWith('cb-')
 }
