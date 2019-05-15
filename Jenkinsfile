@@ -69,24 +69,27 @@ node('private-core-template-maven3.5.4') {
             }
         }
 
-        // Release a new private core signed war
-        stage('Release') {
-	   cbpjcReleaseSign {
-                branchName = env.BRANCH_NAME
-                skipApproval = true
-           }
-        }
+        if(!isPR() && isNotMaster()) {
 
-        // Generate a new PR against URR with bumped version
-        stage('Bump version on URR') {
-            pullRequest(
-		branchName: branchName,
-                destinationBranchName: urrBranch,
-                url: 'https://github.com/cloudbees/unified-release.git', 
-                commands: commands,
-                message: 'Automated bump version',
-                token: token
-            )
+            // Release a new private core signed war
+            stage('Release') {
+        	   cbpjcReleaseSign {
+                    branchName = env.BRANCH_NAME
+                    skipApproval = true
+               }
+            }
+
+            // Generate a new PR against URR with bumped version
+            stage('Bump version on URR') {
+                pullRequest(
+    		branchName: branchName,
+                    destinationBranchName: urrBranch,
+                    url: 'https://github.com/cloudbees/unified-release.git', 
+                    commands: commands,
+                    message: 'Automated bump version',
+                    token: token
+                )
+            }
         }
     }
 }
@@ -105,4 +108,12 @@ def getToken(credentialId) {
     }
     
     return null
+}
+
+boolean isPR() {
+    return (env.BRANCH_NAME.startsWith('PR-') && env.CHANGE_TARGET != null)
+}
+
+boolean isNotMaster() {
+    return (env.BRANCH_NAME.startsWith('cb-') && !env.BRANCH_NAME.equals('cb-master'))
 }
