@@ -32,6 +32,7 @@ import hudson.PluginManager;
 import hudson.PluginWrapper;
 import hudson.ProxyConfiguration;
 import hudson.security.ACLContext;
+import hudson.util.VersionNumber;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 
@@ -40,7 +41,7 @@ import jenkins.util.SystemProperties;
 import hudson.Util;
 import hudson.XmlFile;
 import static hudson.init.InitMilestone.PLUGINS_STARTED;
-import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.FINEST;
 import static java.util.logging.Level.WARNING;
 
 import hudson.init.Initializer;
@@ -62,6 +63,7 @@ import jenkins.RestartRequiredException;
 import jenkins.install.InstallUtil;
 import jenkins.model.Jenkins;
 import jenkins.util.io.OnMaster;
+import jenkins.util.java.JavaUtils;
 import net.sf.json.JSONObject;
 
 import org.acegisecurity.Authentication;
@@ -152,7 +154,8 @@ import org.kohsuke.stapler.interceptor.RequirePOST;
 @ExportedBean
 public class UpdateCenter extends AbstractModelObject implements Saveable, OnMaster, StaplerProxy {
 
-    private static final String UPDATE_CENTER_URL = SystemProperties.getString(UpdateCenter.class.getName()+".updateCenterUrl","https://updates.jenkins.io/");
+    private static final Logger LOGGER;
+    private static final String UPDATE_CENTER_URL;
 
     /**
      * Read timeout when downloading plugins, defaults to 1 minute
@@ -205,6 +208,18 @@ public class UpdateCenter extends AbstractModelObject implements Saveable, OnMas
     private UpdateCenterConfiguration config;
 
     private boolean requiresRestart;
+
+    static {
+        Logger logger = Logger.getLogger(UpdateCenter.class.getName());
+        LOGGER = logger;
+        String ucOverride = SystemProperties.getString(UpdateCenter.class.getName()+".updateCenterUrl");
+        if (ucOverride != null) {
+            logger.log(Level.INFO, "Using a custom update center defined by the system property: {0}", ucOverride);
+            UPDATE_CENTER_URL = ucOverride;
+        } else {
+            UPDATE_CENTER_URL = "https://updates.jenkins.io/";
+        }
+    }
 
     /**
      * Simple connection status enum.
@@ -613,6 +628,24 @@ public class UpdateCenter extends AbstractModelObject implements Saveable, OnMas
         for (UpdateSite s : sites) {
             Plugin p = s.getPlugin(artifactId);
             if (p!=null) return p;
+        }
+        return null;
+    }
+
+    /**
+     * Gets the plugin with the given name from the first {@link UpdateSite} to contain it.
+     * @return Discovered {@link Plugin}. {@code null} if it cannot be found
+     */
+    public @CheckForNull Plugin getPlugin(String artifactId, @CheckForNull VersionNumber minVersion) {
+        if (minVersion == null) {
+            return getPlugin(artifactId);
+        }
+        for (UpdateSite s : sites) {
+            Plugin p = s.getPlugin(artifactId);
+            if (p!=null) {
+                if (minVersion.isNewerThan(new VersionNumber(p.version))) continue;
+                return p;
+            }
         }
         return null;
     }
@@ -1905,7 +1938,7 @@ public class UpdateCenter extends AbstractModelObject implements Saveable, OnMas
         }
 
         if (result512 == VerificationResult.NOT_PROVIDED && result256 == VerificationResult.NOT_PROVIDED) {
-            LOGGER.log(INFO, "Attempt to verify a downloaded file (" + file.getName() + ") using SHA-512 or SHA-256 failed since your configured update site does not provide either of those checksums. Falling back to SHA-1.");
+            LOGGER.log(FINEST, "Attempt to verify a downloaded file (" + file.getName() + ") using SHA-512 or SHA-256 failed since your configured update site does not provide either of those checksums. Falling back to SHA-1.");
         }
 
         VerificationResult result1 = verifyChecksums(entry.getSha1(), job.getComputedSHA1(), true);
@@ -2267,7 +2300,36 @@ public class UpdateCenter extends AbstractModelObject implements Saveable, OnMas
         public int compareTo(PluginEntry o) {
             int r = category.compareTo(o.category);
             if (r==0) r = plugin.name.compareToIgnoreCase(o.plugin.name);
+            if (r==0) r = new VersionNumber(plugin.version).compareTo(new VersionNumber(o.plugin.version));
             return r;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            PluginEntry that = (PluginEntry) o;
+
+            if (!category.equals(that.category)) {
+                return false;
+            }
+            if (!plugin.name.equals(that.plugin.name)) {
+                return false;
+            }
+            return plugin.version.equals(that.plugin.version);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = category.hashCode();
+            result = 31 * result + plugin.name.hashCode();
+            result = 31 * result + plugin.version.hashCode();
+            return result;
         }
     }
 
@@ -2326,8 +2388,6 @@ public class UpdateCenter extends AbstractModelObject implements Saveable, OnMas
      * Sequence number generator.
      */
     private static final AtomicInteger iota = new AtomicInteger();
-
-    private static final Logger LOGGER = Logger.getLogger(UpdateCenter.class.getName());
 
     /**
      * @deprecated as of 1.333

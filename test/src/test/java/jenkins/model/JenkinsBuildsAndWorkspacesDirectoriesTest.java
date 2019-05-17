@@ -12,6 +12,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.jvnet.hudson.test.ExtractResourceSCM;
 import org.jvnet.hudson.test.Issue;
@@ -26,7 +27,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
+import java.util.logging.LogRecord;
 import java.util.stream.Stream;
+import java.util.stream.Collectors;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.assertEquals;
@@ -46,6 +49,7 @@ import static org.junit.Assume.assumeFalse;
 public class JenkinsBuildsAndWorkspacesDirectoriesTest {
 
     private static final String LOG_WHEN_CHANGING_BUILDS_DIR = "Changing builds directories from ";
+    private static final String LOG_WHEN_CHANGING_WORKSPACES_DIR = "Changing workspaces directories from ";
 
     @Rule
     public RestartableJenkinsRule story = new RestartableJenkinsRule();
@@ -66,6 +70,29 @@ public class JenkinsBuildsAndWorkspacesDirectoriesTest {
     private void clearSystemProperties() {
         Stream.of(Jenkins.BUILDS_DIR_PROP, Jenkins.WORKSPACES_DIR_PROP)
                 .forEach(System::clearProperty);
+    }
+
+    @Issue("JENKINS-53284")
+    @Test
+    public void changeWorkspacesDirLog() throws Exception {
+        loggerRule.record(Jenkins.class, Level.WARNING)
+                .record(Jenkins.class, Level.INFO).capture(1000);
+
+        story.then(step -> {
+            assertFalse(logWasFound(LOG_WHEN_CHANGING_WORKSPACES_DIR));
+            setWorkspacesDirProperty("testdir1");
+        });
+
+        story.then(step -> {
+            assertTrue(logWasFoundAtLevel(LOG_WHEN_CHANGING_WORKSPACES_DIR,
+                                          Level.WARNING));
+            setWorkspacesDirProperty("testdir2");
+        });
+
+        story.then(step -> {
+            assertTrue(logWasFoundAtLevel(LOG_WHEN_CHANGING_WORKSPACES_DIR,
+                                          Level.WARNING));
+        });
     }
 
     @Issue("JENKINS-50164")
@@ -206,6 +233,7 @@ public class JenkinsBuildsAndWorkspacesDirectoriesTest {
         );
     }
 
+    @Ignore("TODO calling restart seems to break Surefire")
     @Issue("JENKINS-50164")
     @LocalData
     @Test
@@ -259,6 +287,13 @@ public class JenkinsBuildsAndWorkspacesDirectoriesTest {
         return loggerRule.getRecords().stream()
                 .anyMatch(record -> record.getMessage().contains(searched));
     }
+
+	private boolean logWasFoundAtLevel(String searched, Level level) {
+		return loggerRule.getRecords().stream()
+				.filter(record -> record.getMessage().contains(searched))
+				.filter(record -> record.getLevel().equals(level))
+				.collect(Collectors.toList()).size() > 0;
+	}
 
     @Test
     @Issue("JENKINS-12251")
