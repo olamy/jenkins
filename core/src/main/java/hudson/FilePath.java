@@ -130,6 +130,7 @@ import org.apache.tools.zip.ZipEntry;
 import org.apache.tools.zip.ZipFile;
 import org.jenkinsci.remoting.RoleChecker;
 import org.jenkinsci.remoting.RoleSensitive;
+import org.jenkinsci.remoting.SerializableOnlyOverRemoting;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.Function;
@@ -138,6 +139,7 @@ import org.kohsuke.stapler.Stapler;
 import static hudson.FilePath.TarCompression.GZIP;
 import static hudson.Util.fileToPath;
 import static hudson.Util.fixEmpty;
+import java.io.NotSerializableException;
 
 import java.util.Collections;
 import org.apache.tools.ant.BuildException;
@@ -207,7 +209,7 @@ import org.apache.tools.ant.BuildException;
  * @author Kohsuke Kawaguchi
  * @see VirtualFile
  */
-public final class FilePath implements Serializable {
+public final class FilePath implements SerializableOnlyOverRemoting {
     /**
      * Maximum http redirects we will follow. This defaults to the same number as Firefox/Chrome tolerates.
      */
@@ -325,7 +327,7 @@ public final class FilePath implements Serializable {
         }
         boolean isAbsolute = buf.length() > 0;
         // Split remaining path into tokens, trimming any duplicate or trailing separators
-        List<String> tokens = new ArrayList<String>();
+        List<String> tokens = new ArrayList<>();
         int s = 0, end = path.length();
         for (int i = 0; i < end; i++) {
             char c = path.charAt(i);
@@ -386,7 +388,7 @@ public final class FilePath implements Serializable {
             return false;
         // Windows can handle '/' as a path separator but Unix can't,
         // so err on Unix side
-        return remote.indexOf("\\")==-1;
+        return !remote.contains("\\");
     }
 
     /**
@@ -637,14 +639,13 @@ public final class FilePath implements Serializable {
     private void unzip(File dir, File zipFile) throws IOException {
         dir = dir.getAbsoluteFile();    // without absolutization, getParentFile below seems to fail
         ZipFile zip = new ZipFile(zipFile);
-        @SuppressWarnings("unchecked")
         Enumeration<ZipEntry> entries = zip.getEntries();
 
         try {
             while (entries.hasMoreElements()) {
                 ZipEntry e = entries.nextElement();
                 File f = new File(dir, e.getName());
-                if (!f.toPath().normalize().startsWith(dir.toPath())) {
+                if (!f.getCanonicalPath().startsWith(dir.getCanonicalPath())) {
                     throw new IOException(
                         "Zip " + zipFile.getPath() + " contains illegal file name that breaks out of the target directory: " + e.getName());
                 }
@@ -1062,7 +1063,7 @@ public final class FilePath implements Serializable {
         if(channel!=null) {
             // run this on a remote system
             try {
-                DelegatingCallable<T,IOException> wrapper = new FileCallableWrapper<T>(callable, cl);
+                DelegatingCallable<T,IOException> wrapper = new FileCallableWrapper<>(callable, cl);
                 for (FileCallableWrapperFactory factory : ExtensionList.lookup(FileCallableWrapperFactory.class)) {
                     wrapper = factory.wrap(wrapper);
                 }
@@ -1137,7 +1138,7 @@ public final class FilePath implements Serializable {
      */
     public <T> Future<T> actAsync(final FileCallable<T> callable) throws IOException, InterruptedException {
         try {
-            DelegatingCallable<T,IOException> wrapper = new FileCallableWrapper<T>(callable);
+            DelegatingCallable<T,IOException> wrapper = new FileCallableWrapper<>(callable);
             for (FileCallableWrapperFactory factory : ExtensionList.lookup(FileCallableWrapperFactory.class)) {
                 wrapper = factory.wrap(wrapper);
             }
@@ -1840,7 +1841,7 @@ public final class FilePath implements Serializable {
                     return Collections.emptyList();
                 }
 
-                ArrayList<FilePath> r = new ArrayList<FilePath>(children.length);
+                ArrayList<FilePath> r = new ArrayList<>(children.length);
                 for (File child : children)
                     r.add(new FilePath(child));
 
@@ -1931,8 +1932,7 @@ public final class FilePath implements Serializable {
         } catch (BuildException x) {
             throw new IOException(x.getMessage());
         }
-        String[] files = ds.getIncludedFiles();
-        return files;
+        return ds.getIncludedFiles();
     }
 
     /**
@@ -2363,12 +2363,7 @@ public final class FilePath implements Serializable {
                 future.get();
                 return future2.get();
             } catch (ExecutionException e) {
-                Throwable cause = e.getCause();
-                if (cause == null) cause = e;
-                throw cause instanceof IOException
-                        ? (IOException) cause
-                        : new IOException(cause)
-                ;
+                throw ioWithCause(e);
             }
         } else {
             // remote -> local copy
@@ -2393,15 +2388,20 @@ public final class FilePath implements Serializable {
             try {
                 return future.get();
             } catch (ExecutionException e) {
-                Throwable cause = e.getCause();
-                if (cause == null) cause = e;
-                throw cause instanceof IOException
-                        ? (IOException) cause
-                        : new IOException(cause)
-                ;
+                throw ioWithCause(e);
             }
         }
     }
+
+    private IOException ioWithCause(ExecutionException e) {
+        Throwable cause = e.getCause();
+        if (cause == null) cause = e;
+        return cause instanceof IOException
+                ? (IOException) cause
+                : new IOException(cause)
+                ;
+    }
+
     private class CopyRecursiveLocal extends SecureFileCallable<Integer> {
         private final FilePath target;
         private final DirScanner scanner;
@@ -2987,18 +2987,26 @@ public final class FilePath implements Serializable {
     }
 
     private void writeObject(ObjectOutputStream oos) throws IOException {
-        Channel target = Channel.current();
-
-        if(channel!=null && channel!=target)
-            throw new IllegalStateException("Can't send a remote FilePath to a different remote channel");
+        Channel target = _getChannelForSerialization();
+        if (channel != null && channel != target) {
+            throw new IllegalStateException("Can't send a remote FilePath to a different remote channel (current=" + channel + ", target=" + target + ")");
+        }
 
         oos.defaultWriteObject();
         oos.writeBoolean(channel==null);
     }
 
+    private Channel _getChannelForSerialization() {
+        try {
+            return getChannelForSerialization();
+        } catch (NotSerializableException x) {
+            LOGGER.log(Level.WARNING, "A FilePath object is being serialized when it should not be, indicating a bug in a plugin. See https://jenkins.io/redirect/filepath-serialization for details.", x);
+            return null;
+        }
+    }
+
     private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
-        Channel channel = Channel.current();
-        assert channel!=null;
+        Channel channel = _getChannelForSerialization();
 
         ois.defaultReadObject();
         if(ois.readBoolean()) {
