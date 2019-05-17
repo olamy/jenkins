@@ -73,5 +73,4 @@ public class MavenConsoleAnnotator extends LineTransformationOutputStream.Delega
 
         out.write(b,0,len);
     }
-
 }
