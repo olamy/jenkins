@@ -13,6 +13,9 @@
 // TEST FLAG - to make it easier to turn on/off unit tests for speeding up access to later stuff.
 def runTests = true
 
+// Private core jenkins branch to release private signed war
+def branch = env.BRANCH_NAME
+
 // URR bump version and automated RFC pull request creation
 def urrBranch = "stable-"
 def branchName = UUID.randomUUID().toString()
@@ -74,7 +77,7 @@ node('private-core-template-maven3.5.4') {
             // Release a new private core signed war
             stage('Release') {
         	   cbpjcReleaseSign {
-                    branchName = env.BRANCH_NAME
+                    branchName = branch
                     skipApproval = true
                }
             }
