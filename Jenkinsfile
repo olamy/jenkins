@@ -13,6 +13,9 @@
 // TEST FLAG - to make it easier to turn on/off unit tests for speeding up access to later stuff.
 def runTests = true
 
+// RELEASE FLAG - to avoid undesired releases, use only when we want to release a new private core and to bump version on URR
+def release = false
+
 // Private core jenkins branch to release private signed war
 def branch = env.BRANCH_NAME
 
@@ -72,28 +75,28 @@ node('private-core-template-maven3.5.4') {
             }
         }
 
-        if(!isPR() && isNotMaster()) {
-
-            // Release a new private core signed war
-            stage('Release') {
-        	   cbpjcReleaseSign {
-                    branchName = branch
-                    skipApproval = true
-               }
-            }
-
-            // Generate a new PR against URR with bumped version
-            stage('Bump version on URR') {
-                pullRequest(
-                    branchName: branchName,
-                    destinationBranchName: urrBranch,
-                    url: 'https://github.com/cloudbees/unified-release.git',
-                    commands: commands,
-                    message: 'Automated bump version',
-                    token: token
-                )
-            }
-        }
+//        if(release && !isPR() && isNotMaster()) {
+//
+//            // Release a new private core signed war
+//            stage('Release') {
+//        	   cbpjcReleaseSign {
+//                    branchName = branch
+//                    skipApproval = true
+//               }
+//            }
+//
+//            // Generate a new PR against URR with bumped version
+//            stage('Bump version on URR') {
+//               pullRequest(
+//                    branchName: branchName,
+//                    destinationBranchName: urrBranch,
+//                    url: 'https://github.com/cloudbees/unified-release.git',
+//                    commands: commands,
+//                    message: 'Automated bump version',
+//                    token: token
+//                )
+//            }
+//        }
     }
 }
 
