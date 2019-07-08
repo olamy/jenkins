@@ -16,6 +16,42 @@
 #######################################################################################################################
 
 
+#####################
+# Cloudbess Propietary Plugins #
+#####################
+# cloudbees-metrics-view:
+method com.cloudbees.jenkins.plugin.metrics.views.Alerter$RootActionImpl getConditions
+# cloudbees-folders-plus:
+
+method com.cloudbees.jenkins.plugins.foldersplus.SecurityGrantsFolderProperty$SecurityGrantManager getGrantsById
+method com.cloudbees.jenkins.plugins.foldersplus.SecurityTokensNodeProperty$SecurityTokenManager getTokensById
+
+# cloudbees-update-center:
+method com.cloudbees.plugins.updatecenter.UpdateCenter getTools java.lang.String
+
+# tiger-tenant:
+method com.cloudbees.jce.plugins.tenant.HealthCheckRootAction doCheck
+
+# nectar-rbac:
+method nectar.plugins.rbac.strategy.RoleMatrixAuthorizationPlugin getManage org.kohsuke.stapler.StaplerRequest
+
+# palace-cloud:
+class com.cloudbees.tiger.plugins.palace.PlannedPalaceSlaveSet
+
+# cloudbees-template:
+class com.cloudbees.hudson.plugins.modeling.impl.ModelReference
+
+# cloudbees-metrics-view:
+method com.cloudbees.jenkins.plugin.metrics.views.Alerter$RootActionImpl getConditions
+
+# cloudbees-folders-plus:
+method com.cloudbees.jenkins.plugins.foldersplus.SecurityGrantsFolderProperty$SecurityGrantManager getGrantsById
+method com.cloudbees.jenkins.plugins.foldersplus.SecurityTokensNodeProperty$SecurityTokenManager getTokensById
+
+# cloudbees-update-center:
+method com.cloudbees.plugins.updatecenter.UpdateCenter getTools java.lang.String
+
+
 ######################
 # Credentials Plugin #
 ######################
