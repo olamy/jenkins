@@ -64,7 +64,7 @@ node('private-core-template-maven3.5.4') {
                             version = jenkinsVersion.replaceAll('-cb-','.') + '-SNAPSHOT'
                             urrBranch += jenkinsVersion.substring(0,5)
                             commands = 'mvn versions:set-property -Dproperty=jenkins.version -DnewVersion=' + jenkinsVersion + ' && mvn versions:set -DnewVersion=' + version + ' && mvn envelope:validate'
-                            isRelease = ( sh(script: "git log --format=%s -1 | grep --fixed-string '[maven-release-plugin] prepare'", returnStatus: true) == 0 )
+                            isRelease = ( sh(script: "git log --format=%s -1 | grep --fixed-string '[maven-release-plugin]'", returnStatus: true) == 0 )
                         }
                     }
                 } finally {
