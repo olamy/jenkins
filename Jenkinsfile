@@ -24,13 +24,18 @@ def token = getToken(cred)
 
 // Jenkins version
 def jenkinsVersion = ""
-def version = ""
+
+// URR version
+def urrVersion = ""
 
 // Check if it is a release
 def isRelease = false
 
 // Bump commands
 def commands = ""
+
+// URR repo
+def urrRepo = 'https://github.com/cloudbees/unified-release.git'
 
 properties([buildDiscarder(logRotator(numToKeepStr: '15', artifactNumToKeepStr: '15'))])
 
@@ -59,12 +64,32 @@ node('private-core-template-maven3.5.4') {
                                 mvn -Pdebug -U clean verify ${runTests ? '-Dmaven.test.failure.ignore' : '-DskipTests'} -V -B -Dmaven.repo.local=$m2repo -s settings.xml -e
                                 cp -a target/*.pom pom.xml
                             """
+                            isRelease = ( sh(script: "git log --format=%s -1 | grep --fixed-string '[maven-release-plugin]'", returnStatus: true) == 0 )
                             def pom = readMavenPom()
                             jenkinsVersion = pom.version?.replaceAll('-SNAPSHOT', '')
-                            version = jenkinsVersion.replaceAll('-cb-','.') + '-SNAPSHOT'
                             urrBranch += jenkinsVersion.substring(0,5)
-                            commands = 'mvn versions:set-property -Dproperty=jenkins.version -DnewVersion=' + jenkinsVersion + ' && mvn versions:set -DnewVersion=' + version + ' && mvn envelope:validate'
-                            isRelease = ( sh(script: "git log --format=%s -1 | grep --fixed-string '[maven-release-plugin]'", returnStatus: true) == 0 )
+                            git credentialsId: env.GITHUB_CREDENTIALS, url: urrRepo, branch: urrBranch
+                            def pomVersion = readMavenPom().version
+                            def urrVersionWithoutSnapshot = pomVersion.replaceAll('-SNAPSHOT', '')
+                            Integer minor = urrVersionWithoutSnapshot.split('\\.')[3] as int
+                            minor = minor + 1
+                            urrVersion = pomVersion.substring(0,8) + minor + "-SNAPSHOT"
+                            commands = 'mvn versions:set-property -Dproperty=jenkins.version -DnewVersion=' + jenkinsVersion + ' && mvn versions:set -DnewVersion=' + urrVersion + ' && mvn envelope:validate'
+
+                            println "JENKINS VERSION"
+                            println jenkinsVersion
+                                                      
+                            println "URR VERSION"
+                            println urrVersion
+                            
+                            println "URR BRANCH"
+                            println urrBranch
+                            
+                            println "COMMANDS"
+                            println commands
+                            
+                            println "RELEASE"
+                            println isRelease
                         }
                     }
                 } finally {
@@ -80,8 +105,8 @@ node('private-core-template-maven3.5.4') {
 
             // Release a new private core signed war
             stage('Release') {
-        	   cbpjcReleaseSign {
-                   branchName = branch
+               cbpjcReleaseSign {
+                    branchName = branch
                     skipApproval = true
                }
             }
@@ -91,7 +116,7 @@ node('private-core-template-maven3.5.4') {
                pullRequest(
                     branchName: branchName,
                     destinationBranchName: urrBranch,
-                    url: 'https://github.com/cloudbees/unified-release.git',
+                    url: urrRepo,
                     commands: commands,
                     message: 'Automated bump version',
                     token: token
