@@ -94,7 +94,7 @@ node('private-core-template-maven3.5.4') {
             }
         }
 
-        if(!isRelease && !isPR() && isNotMaster()) {
+        if(!isRelease && !isPR() && isCB()) {
 
             // Release a new private core signed war
             stage('Release') {
@@ -139,6 +139,6 @@ boolean isPR() {
     return (env.BRANCH_NAME.startsWith('PR-') && env.CHANGE_TARGET != null)
 }
 
-boolean isNotMaster() {
+boolean isCB() {
     return (env.BRANCH_NAME.startsWith('cb-') && !env.BRANCH_NAME.equals('cb-master'))
 }
