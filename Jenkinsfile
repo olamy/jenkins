@@ -13,9 +13,6 @@
 // TEST FLAG - to make it easier to turn on/off unit tests for speeding up access to later stuff.
 def runTests = true
 
-// RELEASE FLAG - to avoid undesired releases, use only when we want to release a new private core and to bump version on URR
-def release = false
-
 // Private core jenkins branch to release private signed war
 def branch = env.BRANCH_NAME
 
@@ -27,10 +24,18 @@ def token = getToken(cred)
 
 // Jenkins version
 def jenkinsVersion = ""
-def version = ""
+
+// URR version
+def urrVersion = ""
+
+// Check if it is a release
+def isRelease = false
 
 // Bump commands
 def commands = ""
+
+// URR repo
+def urrRepo = 'https://github.com/cloudbees/unified-release.git'
 
 properties([buildDiscarder(logRotator(numToKeepStr: '15', artifactNumToKeepStr: '15'))])
 
@@ -59,11 +64,25 @@ node('private-core-template-maven3.5.4') {
                                 mvn -Pdebug -U clean verify ${runTests ? '-Dmaven.test.failure.ignore' : '-DskipTests'} -V -B -Dmaven.repo.local=$m2repo -s settings.xml -e
                                 cp -a target/*.pom pom.xml
                             """
+                            isRelease = ( sh(script: "git log --format=%s -1 | grep --fixed-string '[maven-release-plugin]'", returnStatus: true) == 0 )
                             def pom = readMavenPom()
                             jenkinsVersion = pom.version?.replaceAll('-SNAPSHOT', '')
-                            version = jenkinsVersion.replaceAll('-cb-','.') + '-SNAPSHOT'
                             urrBranch += jenkinsVersion.substring(0,5)
-                            commands = 'mvn versions:set-property -Dproperty=jenkins.version -DnewVersion=' + jenkinsVersion + ' && mvn versions:set -DnewVersion=' + version + ' && mvn envelope:validate'
+
+                            git credentialsId: env.GITHUB_CREDENTIALS, url: urrRepo, branch: urrBranch
+                            def pomVersion = readMavenPom().version
+                            def urrVersionWithoutSnapshot = pomVersion.replaceAll('-SNAPSHOT', '')
+                            Integer minor = urrVersionWithoutSnapshot.split('\\.')[3] as int
+                            minor = minor + 1
+                            urrVersion = pomVersion.substring(0,8) + minor + "-SNAPSHOT"
+
+                            commands = 'mvn versions:set-property -Dproperty=jenkins.version -DnewVersion=' + jenkinsVersion + ' && mvn versions:set -DnewVersion=' + urrVersion + ' && mvn envelope:validate'
+
+                            println "JENKINS VERSION: " + jenkinsVersion
+                            println "URR VERSION: " + urrVersion
+                            println "URR BRANCH: " + urrBranch
+                            println "COMMANDS: " + commands
+                            println "RELEASE: " + isRelease
                         }
                     }
                 } finally {
@@ -75,28 +94,28 @@ node('private-core-template-maven3.5.4') {
             }
         }
 
-//        if(release && !isPR() && isNotMaster()) {
-//
-//            // Release a new private core signed war
-//            stage('Release') {
-//        	   cbpjcReleaseSign {
-//                    branchName = branch
-//                    skipApproval = true
-//               }
-//            }
-//
-//            // Generate a new PR against URR with bumped version
-//            stage('Bump version on URR') {
-//               pullRequest(
-//                    branchName: branchName,
-//                    destinationBranchName: urrBranch,
-//                    url: 'https://github.com/cloudbees/unified-release.git',
-//                    commands: commands,
-//                    message: 'Automated bump version',
-//                    token: token
-//                )
-//            }
-//        }
+        if(!isRelease && !isPR() && isCB()) {
+
+            // Release a new private core signed war
+            stage('Release') {
+               cbpjcReleaseSign {
+                    branchName = branch
+                    skipApproval = true
+               }
+            }
+
+            // Generate a new PR against URR with bumped version
+            stage('Bump version on URR') {
+               pullRequest(
+                    branchName: branchName,
+                    destinationBranchName: urrBranch,
+                    url: urrRepo,
+                    commands: commands,
+                    message: 'Automated bump version',
+                    token: token
+                )
+            }
+        }
     }
 }
 
@@ -120,6 +139,6 @@ boolean isPR() {
     return (env.BRANCH_NAME.startsWith('PR-') && env.CHANGE_TARGET != null)
 }
 
-boolean isNotMaster() {
+boolean isCB() {
     return (env.BRANCH_NAME.startsWith('cb-') && !env.BRANCH_NAME.equals('cb-master'))
 }
