@@ -23,7 +23,7 @@ The changelogs will be integrated by the core maintainers after the merge.  See 
       * Use the `Internal: ` prefix if the change has no user-visible impact (API, test frameworks, etc.)
 - [ ] Appropriate autotests or explanation to why this change has no tests
 - [ ] For dependency updates: links to external changelogs and, if possible, full diffs
-
+- [ ] PCT and ATH are launched?
 <!-- For new API and extension points: Link to the reference implementation in open-source (or example in Javadoc) -->
 
 ### Desired reviewers
