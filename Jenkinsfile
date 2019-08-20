@@ -18,7 +18,7 @@ def branch = env.BRANCH_NAME
 
 // URR bump version and automated RFC pull request creation
 def urrBranch = "stable-"
-def branchName = UUID.randomUUID().toString()
+def urrBranchName = UUID.randomUUID().toString()
 def cred = env.GITHUB_CREDENTIALS
 def token = getToken(cred)
 
@@ -109,7 +109,7 @@ node('private-core-template-maven3.5.4') {
             // Generate a new PR against URR with bumped version
             stage('Bump version on URR') {
                pullRequest(
-                    branchName: branchName,
+                    branchName: urrBranchName,
                     destinationBranchName: urrBranch,
                     url: urrRepo,
                     commands: commands,
