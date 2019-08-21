@@ -59,7 +59,6 @@ node('private-core-template-maven3.5.4') {
 
                         // Invoke the maven run within the environment we've created
                         withEnv(mvnEnv) {
-                            jenkinsVersion = readMavenPom().version?.replaceAll('-SNAPSHOT', '')
                             // -Dmaven.repo.local=… tells Maven to create a subdir in the temporary directory for the local Maven repository
                             sh """
                                 mvn -Pdebug -U clean verify ${runTests ? '-Dmaven.test.failure.ignore' : '-DskipTests'} -V -B -Dmaven.repo.local=$m2repo -s settings.xml -e
@@ -67,6 +66,7 @@ node('private-core-template-maven3.5.4') {
                             """
                             isRelease = ( sh(script: "git log --format=%s -1 | grep --fixed-string '[maven-release-plugin]'", returnStatus: true) == 0 )
                             def pom = readMavenPom()
+                            jenkinsVersion = pom.version?.replaceAll('-SNAPSHOT', '')
                             urrBranch += jenkinsVersion.substring(0,5)
 
                             git credentialsId: env.GITHUB_CREDENTIALS, url: urrRepo, branch: urrBranch
@@ -83,8 +83,6 @@ node('private-core-template-maven3.5.4') {
                             println "URR BRANCH: " + urrBranch
                             println "COMMANDS: " + commands
                             println "RELEASE: " + isRelease
-                            println "isPR: " + isPR()
-                            println "isCB: " + isCB()
                         }
                     }
                 } finally {
