@@ -76,7 +76,7 @@ node('private-core-template-maven3.5.4') {
                             minor = minor + 1
                             urrVersion = pomVersion.substring(0,8) + minor + "-SNAPSHOT"
 
-                            commands = 'mvn versions:set-property -Dproperty=jenkins.version -DnewVersion=' + jenkinsVersion + ' && mvn versions:set -DnewVersion=' + urrVersion + ' && mvn envelope:validate'
+                            commands = 'mvn versions:set-property -Dproperty=jenkins.version -DnewVersion=' + jenkinsVersion + ' && mvn envelope:validate'
 
                             println "JENKINS VERSION: " + jenkinsVersion
                             println "URR VERSION: " + urrVersion
