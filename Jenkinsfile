@@ -37,9 +37,14 @@ def commands = ""
 // URR repo
 def urrRepo = 'https://github.com/cloudbees/unified-release.git'
 
+// Just to use the env variable when sending emails
+def id = env.BUILD_NUMBER
+def name = env.JOB_BASE_NAME
+
 properties([buildDiscarder(logRotator(numToKeepStr: '15', artifactNumToKeepStr: '15'))])
 
 node('private-core-template-maven3.5.4') {
+    def status = ok()
     timestamps {
         // First stage is actually checking out the source. Since we're using Multibranch
         // currently, we can use "checkout scm".
@@ -60,10 +65,10 @@ node('private-core-template-maven3.5.4') {
                         // Invoke the maven run within the environment we've created
                         withEnv(mvnEnv) {
                             // -Dmaven.repo.local=… tells Maven to create a subdir in the temporary directory for the local Maven repository
-                            sh """
+                            status = sh(script: """
                                 mvn -Pdebug -U clean verify ${runTests ? '-Dmaven.test.failure.ignore  -Dtest=XMLFileTest#canStartWithXml_1_1_ConfigsTest' : '-DskipTests'} -V -B -Dmaven.repo.local=$m2repo -s settings.xml -e
                                 cp -a target/*.pom pom.xml
-                            """
+                            """, returnStatus:true)
                             isRelease = ( sh(script: "git log --format=%s -1 | grep --fixed-string '[maven-release-plugin]'", returnStatus: true) == 0 )
                             def pom = readMavenPom()
                             jenkinsVersion = pom.version?.replaceAll('-SNAPSHOT', '')
@@ -88,6 +93,11 @@ node('private-core-template-maven3.5.4') {
                 } finally {
 
                     if (runTests) {
+                        if (status == unstable()) {
+                            currentBuild.result = 'UNSTABLE'
+                            email()
+                        }
+
                         junit healthScaleFactor: 20.0, testResults: '**/target/surefire-reports/*.xml'
                     }
                 }
@@ -141,4 +151,15 @@ boolean isPR() {
 
 boolean isCB() {
     return (env.BRANCH_NAME.startsWith('cb-') && !env.BRANCH_NAME.equals('cb-master'))
+}
+
+def email() {
+    emailNotification {
+        recipient          = 'release-team-notifications@cloudbees.com'
+        subject            = "Private Jenkins builder failed - ${name} #${id}"
+        template           = 'reporting-job'
+        placeholders       = [
+            description: "Please have a look at the following job:"
+        ]
+    }
 }
