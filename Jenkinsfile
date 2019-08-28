@@ -46,6 +46,11 @@ properties([buildDiscarder(logRotator(numToKeepStr: '15', artifactNumToKeepStr: 
 node('private-core-template-maven3.5.4') {
     try {
         timestamps {
+
+            stage('Test') {
+                println ghprbTargetBranch
+            }
+
             // First stage is actually checking out the source. Since we're using Multibranch
             // currently, we can use "checkout scm".
             stage('Checkout') {
