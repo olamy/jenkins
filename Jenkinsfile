@@ -42,7 +42,7 @@ def id = env.BUILD_NUMBER
 def name = env.JOB_BASE_NAME
 
 // Exclusion list of changes to abort
-def exclusion = ["Jenkinsfile","README.md","NECTARIZE.md","CONTRIBUTING.md"]
+def exclusions = ["Jenkinsfile","README.md","NECTARIZE.md","CONTRIBUTING.md"]
 
 properties([buildDiscarder(logRotator(numToKeepStr: '15', artifactNumToKeepStr: '15'))])
 
@@ -70,18 +70,19 @@ node('private-core-template-maven3.5.4') {
                             withEnv(mvnEnv) {
                                 // Check changes
                                 sh """
+                                    touch changes
                                     git diff remotes/origin/${env.CHANGE_TARGET} --name-only > changes
+                                    less changes
                                 """
                                 def abort = true;
                                 def changes = readFile "changes"
-                                changes.find { change ->
-                                    if (!abort) {
-                                        return true
-                                    } 
+                                println exclusions
+                                changes.tokenize().each { change ->
+
                                     if (!exclusions.contains(change)) {
+                                        println change
                                         abort = false
                                     }
-                                    return false
                                 }
 
                                 if (abort) {
@@ -92,6 +93,7 @@ node('private-core-template-maven3.5.4') {
 
                                 // -Dmaven.repo.local=… tells Maven to create a subdir in the temporary directory for the local Maven repository
                                 sh """
+                                    rm -rf changes
                                     mvn -Pdebug -U clean verify ${runTests ? '-Dmaven.test.failure.ignore' : '-DskipTests'} -V -B -Dmaven.repo.local=$m2repo -s settings.xml -e
                                     cp -a target/*.pom pom.xml
                                 """
