@@ -41,6 +41,12 @@ def urrRepo = 'https://github.com/cloudbees/unified-release.git'
 def id = env.BUILD_NUMBER
 def name = env.JOB_BASE_NAME
 
+// Exclusion list of changes to abort
+def exclusions = ["Jenkinsfile","README.md","NECTARIZE.md","CONTRIBUTING.md"]
+
+// Abort flag based on check of changes against exclusion list
+def abort = true;
+
 properties([buildDiscarder(logRotator(numToKeepStr: '15', artifactNumToKeepStr: '15'))])
 
 node('private-core-template-maven3.5.4') {
@@ -64,8 +70,30 @@ node('private-core-template-maven3.5.4') {
 
                             // Invoke the maven run within the environment we've created
                             withEnv(mvnEnv) {
+                                // Check changes against exclusion list
+                                sh """
+                                    touch changes
+                                    git diff remotes/origin/${env.CHANGE_TARGET} --name-only > changes
+                                    less changes
+                                """
+                                def changes = readFile "changes"
+                                println exclusions
+                                changes.tokenize().each { change ->
+                                    if (!exclusions.contains(change)) {
+                                        println change
+                                        abort = false
+                                    }
+                                }
+
+                                if (abort) {
+                                    println "Changes does not affect to perform a new release of private core"
+                                    currentBuild.result = 'SUCCESS'
+                                    return
+                                }
+
                                 // -Dmaven.repo.local=… tells Maven to create a subdir in the temporary directory for the local Maven repository
                                 sh """
+                                    rm -rf changes
                                     mvn -Pdebug -U clean verify ${runTests ? '-Dmaven.test.failure.ignore' : '-DskipTests'} -V -B -Dmaven.repo.local=$m2repo -s settings.xml -e
                                     cp -a target/*.pom pom.xml
                                 """
@@ -91,7 +119,7 @@ node('private-core-template-maven3.5.4') {
                             }
                         }
                     } finally {
-                        if (runTests) {
+                        if (runTests && !abort) {
                             junit healthScaleFactor: 20.0, testResults: '**/target/surefire-reports/*.xml'
                         }
                     }
