@@ -20,6 +20,9 @@ public class XMLFileTest {
     @LocalData
     public void canStartWithXml_1_1_ConfigsTest() {
 
+        // Force an error
+        assertThat("imontero",is("Ildefonso"));
+
         assertThat(j.jenkins.getLabelString(),is("LESS_TERMCAP_mb=\u001B[01;31m"));
 
     }

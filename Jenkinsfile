@@ -61,7 +61,7 @@ node('private-core-template-maven3.5.4') {
                         withEnv(mvnEnv) {
                             // -Dmaven.repo.local=… tells Maven to create a subdir in the temporary directory for the local Maven repository
                             sh """
-                                mvn -Pdebug -U clean verify ${runTests ? '-Dmaven.test.failure.ignore' : '-DskipTests'} -V -B -Dmaven.repo.local=$m2repo -s settings.xml -e
+                                mvn -Pdebug -U clean verify ${runTests ? '-Dmaven.test.failure.ignore  -Dtest=XMLFileTest#canStartWithXml_1_1_ConfigsTest' : '-DskipTests'} -V -B -Dmaven.repo.local=$m2repo -s settings.xml -e
                                 cp -a target/*.pom pom.xml
                             """
                             isRelease = ( sh(script: "git log --format=%s -1 | grep --fixed-string '[maven-release-plugin]'", returnStatus: true) == 0 )
