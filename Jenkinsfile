@@ -47,10 +47,6 @@ node('private-core-template-maven3.5.4') {
     try {
         timestamps {
 
-            stage('Test') {
-                println env.CHANGE_TARGET
-            }
-
             // First stage is actually checking out the source. Since we're using Multibranch
             // currently, we can use "checkout scm".
             stage('Checkout') {
@@ -71,7 +67,7 @@ node('private-core-template-maven3.5.4') {
                             withEnv(mvnEnv) {
                                 // -Dmaven.repo.local=… tells Maven to create a subdir in the temporary directory for the local Maven repository
                                 sh """
-                                    git diff ${env.BRANCH_NAME} --name-only
+                                    git diff ${env.CHANGE_TARGET} --name-only
                                 """
                                 //sh """
                                 //    mvn -Pdebug -U clean verify ${runTests ? '-Dmaven.test.failure.ignore' : '-DskipTests'} -V -B -Dmaven.repo.local=$m2repo -s settings.xml -e
