@@ -48,7 +48,7 @@ node('private-core-template-maven3.5.4') {
         timestamps {
 
             stage('Test') {
-                println ghprbTargetBranch
+                println env.CHANGE_TARGET
             }
 
             // First stage is actually checking out the source. Since we're using Multibranch
