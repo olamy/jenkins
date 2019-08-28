@@ -52,7 +52,6 @@ properties([buildDiscarder(logRotator(numToKeepStr: '15', artifactNumToKeepStr: 
 node('private-core-template-maven3.5.4') {
     try {
         timestamps {
-
             // First stage is actually checking out the source. Since we're using Multibranch
             // currently, we can use "checkout scm".
             stage('Checkout') {
@@ -71,7 +70,7 @@ node('private-core-template-maven3.5.4') {
 
                             // Invoke the maven run within the environment we've created
                             withEnv(mvnEnv) {
-                                // Check changes
+                                // Check changes against exclusion list
                                 sh """
                                     touch changes
                                     git diff remotes/origin/${env.CHANGE_TARGET} --name-only > changes
@@ -80,7 +79,6 @@ node('private-core-template-maven3.5.4') {
                                 def changes = readFile "changes"
                                 println exclusions
                                 changes.tokenize().each { change ->
-
                                     if (!exclusions.contains(change)) {
                                         println change
                                         abort = false
