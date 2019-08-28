@@ -92,12 +92,12 @@ node('private-core-template-maven3.5.4') {
                     }
                 } finally {
 
-                    if (runTests) {
-                        if (status == unstable()) {
-                            currentBuild.result = 'UNSTABLE'
-                            email()
-                        }
+                    if (status == unstable()) {
+                        currentBuild.result = 'UNSTABLE'
+                        email()
+                    }
 
+                    if (runTests) {
                         junit healthScaleFactor: 20.0, testResults: '**/target/surefire-reports/*.xml'
                     }
                 }
