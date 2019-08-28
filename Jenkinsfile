@@ -153,6 +153,14 @@ boolean isCB() {
     return (env.BRANCH_NAME.startsWith('cb-') && !env.BRANCH_NAME.equals('cb-master'))
 }
 
+def unstable() {
+    return 1
+}
+
+def ok() {
+    return 0
+}
+
 def email() {
     emailNotification {
         recipient          = 'release-team-notifications@cloudbees.com'
