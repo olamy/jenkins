@@ -44,6 +44,9 @@ def name = env.JOB_BASE_NAME
 // Exclusion list of changes to abort
 def exclusions = ["Jenkinsfile","README.md","NECTARIZE.md","CONTRIBUTING.md"]
 
+// Abort flag based on check of changes against exclusion list
+def abort = true;
+
 properties([buildDiscarder(logRotator(numToKeepStr: '15', artifactNumToKeepStr: '15'))])
 
 node('private-core-template-maven3.5.4') {
@@ -74,7 +77,6 @@ node('private-core-template-maven3.5.4') {
                                     git diff remotes/origin/${env.CHANGE_TARGET} --name-only > changes
                                     less changes
                                 """
-                                def abort = true;
                                 def changes = readFile "changes"
                                 println exclusions
                                 changes.tokenize().each { change ->
@@ -119,7 +121,7 @@ node('private-core-template-maven3.5.4') {
                             }
                         }
                     } finally {
-                        if (runTests) {
+                        if (runTests && !abort) {
                             junit healthScaleFactor: 20.0, testResults: '**/target/surefire-reports/*.xml'
                         }
                     }
