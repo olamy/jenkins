@@ -41,6 +41,9 @@ def urrRepo = 'https://github.com/cloudbees/unified-release.git'
 def id = env.BUILD_NUMBER
 def name = env.JOB_BASE_NAME
 
+// Exclusion list of changes to abort
+def exclusion = ["Jenkinsfile","README.md","NECTARIZE.md","CONTRIBUTING.md"]
+
 properties([buildDiscarder(logRotator(numToKeepStr: '15', artifactNumToKeepStr: '15'))])
 
 node('private-core-template-maven3.5.4') {
@@ -65,14 +68,33 @@ node('private-core-template-maven3.5.4') {
 
                             // Invoke the maven run within the environment we've created
                             withEnv(mvnEnv) {
+                                // Check changes
+                                sh """
+                                    git diff remotes/origin/${env.CHANGE_TARGET} --name-only > changes
+                                """
+                                def abort = true;
+                                def changes = readFile "changes"
+                                changes.find { change ->
+                                    if (!abort) {
+                                        return true
+                                    } 
+                                    if (!exclusions.contains(change)) {
+                                        abort = false
+                                    }
+                                    return false
+                                }
+
+                                if (abort) {
+                                    println "Changes does not affect to perform a new release of private core"
+                                    currentBuild.result = 'SUCCESS'
+                                    return
+                                }
+
                                 // -Dmaven.repo.local=… tells Maven to create a subdir in the temporary directory for the local Maven repository
                                 sh """
-                                    git diff remotes/origin/${env.CHANGE_TARGET} --name-only
+                                    mvn -Pdebug -U clean verify ${runTests ? '-Dmaven.test.failure.ignore' : '-DskipTests'} -V -B -Dmaven.repo.local=$m2repo -s settings.xml -e
+                                    cp -a target/*.pom pom.xml
                                 """
-                                //sh """
-                                //    mvn -Pdebug -U clean verify ${runTests ? '-Dmaven.test.failure.ignore' : '-DskipTests'} -V -B -Dmaven.repo.local=$m2repo -s settings.xml -e
-                                //    cp -a target/*.pom pom.xml
-                                //"""
                                 isRelease = ( sh(script: "git log --format=%s -1 | grep --fixed-string '[maven-release-plugin]'", returnStatus: true) == 0 )
                                 def pom = readMavenPom()
                                 jenkinsVersion = pom.version?.replaceAll('-SNAPSHOT', '')
