@@ -123,7 +123,7 @@ node('private-core-template-maven3.5.4') {
         }
     } finally {
         if (currentBuild.result == 'UNSTABLE') {
-            email()
+            email(id,name)
         }
     }
 }
@@ -152,7 +152,7 @@ boolean isCB() {
     return (env.BRANCH_NAME.startsWith('cb-') && !env.BRANCH_NAME.equals('cb-master'))
 }
 
-def email() {
+def email(id, name) {
     emailNotification {
         recipient          = 'release-team-notifications@cloudbees.com'
         subject            = "Private Jenkins builder failed - ${name} #${id}"
