@@ -70,30 +70,35 @@ node('private-core-template-maven3.5.4') {
 
                             // Invoke the maven run within the environment we've created
                             withEnv(mvnEnv) {
-                                // Check changes against exclusion list
-                                sh """
-                                    touch changes
-                                    git diff remotes/origin/${env.CHANGE_TARGET} --name-only > changes
-                                    less changes
-                                """
-                                def changes = readFile "changes"
-                                println exclusions
-                                changes.tokenize().each { change ->
-                                    if (!exclusions.contains(change)) {
-                                        println change
-                                        abort = false
+                                if (isPR()) {
+                                    // Check changes against exclusion list
+                                    sh """
+                                        touch changes
+                                        git diff remotes/origin/${env.CHANGE_TARGET} --name-only > changes
+                                        less changes
+                                    """
+                                    def changes = readFile "changes"
+                                    println exclusions
+                                    changes.tokenize().each { change ->
+                                        if (!exclusions.contains(change)) {
+                                            println change
+                                            abort = false
+                                        }
                                     }
-                                }
 
-                                if (abort) {
-                                    println "Changes does not affect to perform a new release of private core"
-                                    currentBuild.result = 'SUCCESS'
-                                    return
+                                    if (abort) {
+                                        println "Changes does not affect to perform a new release of private core"
+                                        currentBuild.result = 'SUCCESS'
+                                        return
+                                    }
+
+                                    sh """
+                                        rm -rf changes
+                                    """
                                 }
 
                                 // -Dmaven.repo.local=… tells Maven to create a subdir in the temporary directory for the local Maven repository
                                 sh """
-                                    rm -rf changes
                                     mvn -Pdebug -U clean verify ${runTests ? '-Dmaven.test.failure.ignore' : '-DskipTests'} -V -B -Dmaven.repo.local=$m2repo -s settings.xml -e
                                     cp -a target/*.pom pom.xml
                                 """
