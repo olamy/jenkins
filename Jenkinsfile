@@ -42,7 +42,7 @@ def id = env.BUILD_NUMBER
 def name = env.JOB_BASE_NAME
 
 // Exclusion list of changes to abort
-def exclusions = ["Jenkinsfile",README.md","NECTARIZE.md","CONTRIBUTING.md"]
+def exclusions = ["Jenkinsfile","README.md","NECTARIZE.md","CONTRIBUTING.md"]
 
 // Abort flag based on check of changes against exclusion list
 def abort = true;
