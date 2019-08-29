@@ -11,7 +11,8 @@
 @Library('rosie-libs') _
 
 // TEST FLAG - to make it easier to turn on/off unit tests for speeding up access to later stuff.
-def runTests = true
+// TODO setup as true
+def runTests = false
 
 // Private core jenkins branch to release private signed war
 def branch = env.BRANCH_NAME
@@ -42,7 +43,8 @@ def id = env.BUILD_NUMBER
 def name = env.JOB_BASE_NAME
 
 // Exclusion list of changes to abort
-def exclusions = ["Jenkinsfile","README.md","NECTARIZE.md","CONTRIBUTING.md"]
+// TODO include Jenkinsfile
+def exclusions = ["README.md","NECTARIZE.md","CONTRIBUTING.md"]
 
 // Abort flag based on check of changes against exclusion list
 def abort = true;
