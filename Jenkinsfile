@@ -106,17 +106,17 @@ node('private-core-template-maven3.5.4') {
                                 def pom = readMavenPom()
                                 jenkinsVersion = pom.version?.replaceAll('-SNAPSHOT', '')
                                 urrBranch += jenkinsVersion.substring(0,5)
-                                urrVersion = jenkinsVersion.substring(0,7) + ".1-SNAPSHOT"
-
+                                
                                 if (jenkinsVersion.endsWith("cb-1")) {
                                     // there is a new core version, so to bump URR is needed
+                                    urrVersion = jenkinsVersion.substring(0,7) + ".1-SNAPSHOT"
                                     commands = 'mvn versions:set-property -Dproperty=jenkins.version -DnewVersion=' + jenkinsVersion + ' && mvn versions:set -DnewVersion=' + urrVersion + ' && mvn envelope:validate'
+                                    println "URR VERSION: " + urrVersion
                                 } else {
                                     commands = 'mvn versions:set-property -Dproperty=jenkins.version -DnewVersion=' + jenkinsVersion + ' && mvn envelope:validate'
                                 }
 
                                 println "JENKINS VERSION: " + jenkinsVersion
-                                println "URR VERSION: " + urrVersion
                                 println "URR BRANCH: " + urrBranch
                                 println "COMMANDS: " + commands
                                 println "RELEASE: " + isRelease
