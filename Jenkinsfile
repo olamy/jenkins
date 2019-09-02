@@ -106,18 +106,17 @@ node('private-core-template-maven3.5.4') {
                                 def pom = readMavenPom()
                                 jenkinsVersion = pom.version?.replaceAll('-SNAPSHOT', '')
                                 urrBranch += jenkinsVersion.substring(0,5)
-
-                                git credentialsId: env.GITHUB_CREDENTIALS, url: urrRepo, branch: urrBranch
-                                def pomVersion = readMavenPom().version
-                                def urrVersionWithoutSnapshot = pomVersion.replaceAll('-SNAPSHOT', '')
-                                Integer minor = urrVersionWithoutSnapshot.split('\\.')[3] as int
-                                minor = minor + 1
-                                urrVersion = pomVersion.substring(0,8) + minor + "-SNAPSHOT"
-
-                                commands = 'mvn versions:set-property -Dproperty=jenkins.version -DnewVersion=' + jenkinsVersion + ' && mvn envelope:validate'
+                                
+                                if (jenkinsVersion.endsWith("cb-1")) {
+                                    // there is a new core version, so to bump URR is needed
+                                    urrVersion = jenkinsVersion.substring(0,7) + ".1-SNAPSHOT"
+                                    commands = 'mvn versions:set-property -Dproperty=jenkins.version -DnewVersion=' + jenkinsVersion + ' && mvn versions:set -DnewVersion=' + urrVersion + ' && mvn envelope:validate'
+                                    println "URR VERSION: " + urrVersion
+                                } else {
+                                    commands = 'mvn versions:set-property -Dproperty=jenkins.version -DnewVersion=' + jenkinsVersion + ' && mvn envelope:validate'
+                                }
 
                                 println "JENKINS VERSION: " + jenkinsVersion
-                                println "URR VERSION: " + urrVersion
                                 println "URR BRANCH: " + urrBranch
                                 println "COMMANDS: " + commands
                                 println "RELEASE: " + isRelease
