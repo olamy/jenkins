@@ -600,6 +600,25 @@ public abstract class PluginManager extends AbstractModelObject implements OnMas
         }});
     }
 
+    void considerDetachedPlugin(String shortName) {
+        if (new File(rootDir, shortName + ".jpi").isFile()) {
+            LOGGER.fine(() -> "not considering loading a detached dependency " + shortName + " as it is already on disk");
+            return;
+        }
+        LOGGER.fine(() -> "considering loading a detached dependency " + shortName);
+        for (String loadedFile : loadPluginsFromWar("/WEB-INF/detached-plugins", (dir, name) -> normalisePluginName(name).equals(shortName))) {
+            String loaded = normalisePluginName(loadedFile);
+            File arc = new File(rootDir, loaded + ".jpi");
+            LOGGER.info(() -> "Loading a detached plugin as a dependency: " + arc);
+            try {
+                plugins.add(strategy.createPluginWrapper(arc));
+            } catch (IOException e) {
+                failedPlugins.add(new FailedPlugin(arc.getName(), e));
+            }
+
+        }
+    }
+
     protected @Nonnull Set<String> loadPluginsFromWar(@Nonnull String fromPath) {
         return loadPluginsFromWar(fromPath, null);
     }
@@ -1001,15 +1020,18 @@ public abstract class PluginManager extends AbstractModelObject implements OnMas
      * If the war file has any "/WEB-INF/plugins/[*.jpi | *.hpi]", extract them into the plugin directory.
      *
      * @return
-     *      File names of the bundled plugins. Like {"ssh-slaves.hpi","subversion.jpi"}
+     *      File names of the bundled plugins. Normally empty (not to be confused with {@link #loadDetachedPlugins}) but OEM WARs may have some.
      * @throws Exception
      *      Any exception will be reported and halt the startup.
      */
     protected abstract Collection<String> loadBundledPlugins() throws Exception;
 
     /**
-     * Copies the bundled plugin from the given URL to the destination of the given file name (like 'abc.jpi'),
-     * with a reasonable up-to-date check. A convenience method to be used by the {@link #loadBundledPlugins()}.
+     * Copies the plugin from the given URL to the given destination.
+     * Despite the name, this is used also from {@link #loadDetachedPlugins}.
+     * Includes a reasonable up-to-date check.
+     * A convenience method to be used by {@link #loadBundledPlugins()}.
+     * @param fileName like {@code abc.jpi}
      */
     protected void copyBundledPlugin(URL src, String fileName) throws IOException {
         LOGGER.log(FINE, "Copying {0}", src);
