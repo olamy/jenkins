@@ -151,6 +151,7 @@ node('private-core-template-maven3.5.4') {
                         token: token
                     )
                 }
+            }
         }
     } finally {
         if (currentBuild.result == 'UNSTABLE') {
