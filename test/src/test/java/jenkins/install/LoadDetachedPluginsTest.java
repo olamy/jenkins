@@ -27,7 +27,6 @@ package jenkins.install;
 import hudson.ClassicPluginStrategy;
 import jenkins.plugins.DetachedPluginsUtil;
 import jenkins.plugins.DetachedPluginsUtil.DetachedPlugin;
-import hudson.Plugin;
 import hudson.PluginManager;
 import hudson.PluginManagerUtil;
 import hudson.PluginWrapper;
@@ -87,62 +86,6 @@ public class LoadDetachedPluginsTest {
         });
     }
 
-    @Issue("JENKINS-48604")
-    @Test
-    @LocalData
-    public void upgradeFromJenkins2WithNewerDependency() {
-        VersionNumber since = new VersionNumber("2.0");
-        rr.then(r -> {
-            List<DetachedPlugin> detachedPlugins = DetachedPluginsUtil.getDetachedPlugins(since);
-            assertThat("Plugins have been detached since the pre-upgrade version",
-                    detachedPlugins.size(), greaterThan(1));
-            assertThat("Plugins detached between the pre-upgrade version and the current version should be installed",
-                    getInstalledDetachedPlugins(r, detachedPlugins).size(), equalTo(detachedPlugins.size()));
-            Plugin scriptSecurity = r.jenkins.getPlugin("script-security");
-            assertThat("Script-security should be installed", scriptSecurity, notNullValue());
-            assertThat("Dependencies of detached plugins should not be downgraded",
-                    scriptSecurity.getWrapper().getVersionNumber(), equalTo(new VersionNumber("1.34")));
-            assertNoFailedPlugins(r);
-        });
-    }
-
-    @Test
-    @LocalData
-    public void upgradeFromJenkins2WithOlderDependency() {
-        VersionNumber since = new VersionNumber("2.0");
-        rr.then(r -> {
-            List<DetachedPlugin> detachedPlugins = DetachedPluginsUtil.getDetachedPlugins(since);
-            assertThat("Plugins have been detached since the pre-upgrade version",
-                    detachedPlugins.size(), greaterThan(1));
-            assertThat("Plugins detached between the pre-upgrade version and the current version should be installed",
-                    getInstalledDetachedPlugins(r, detachedPlugins).size(), equalTo(detachedPlugins.size()));
-            Plugin scriptSecurity = r.jenkins.getPlugin("script-security");
-            assertThat("Script-security should be installed", scriptSecurity, notNullValue());
-            assertThat("Dependencies of detached plugins should be upgraded to the required version",
-                    scriptSecurity.getWrapper().getVersionNumber(), equalTo(new VersionNumber("1.56")));
-            assertNoFailedPlugins(r);
-        });
-    }
-
-    @Issue("JENKINS-48899")
-    @Test
-    @LocalData
-    public void upgradeFromJenkins2WithNewerPlugin() {
-        // @LocalData has command-launcher 1.2 installed, which should not be downgraded to the detached version: 1.0.
-        VersionNumber since = new VersionNumber("2.0");
-        rr.then(r -> {
-            List<DetachedPlugin> detachedPlugins = DetachedPluginsUtil.getDetachedPlugins(since);
-            assertThat("Plugins have been detached since the pre-upgrade version",
-                    detachedPlugins.size(), greaterThan(1));
-            assertThat("Plugins detached between the pre-upgrade version and the current version should be installed",
-                    getInstalledDetachedPlugins(r, detachedPlugins).size(), equalTo(detachedPlugins.size()));
-            Plugin commandLauncher = r.jenkins.getPlugin("command-launcher");
-            assertThat("Installed detached plugins should not be overwritten by older versions",
-                    commandLauncher.getWrapper().getVersionNumber(), equalTo(new VersionNumber("1.2")));
-            assertNoFailedPlugins(r);
-        });
-    }
-
     @Test
     public void newInstallation() {
         rr.then(r -> {
@@ -182,6 +125,20 @@ public class LoadDetachedPluginsTest {
         PluginWrapper pw = r.jenkins.pluginManager.whichPlugin(c);
         assertNotNull("did not expect to be loading " + c + " from " + c.getClassLoader(), pw);
         assertEquals(expectedPlugin, pw.getShortName());
+    }
+
+    @Issue("JENKINS-55582")
+    @LocalData
+    @Test
+    public void nonstandardFilenames() {
+        logging.record(PluginManager.class, Level.FINE).record(ClassicPluginStrategy.class, Level.FINE);
+        rr.then(r -> {
+            assertTrue(r.jenkins.pluginManager.getPlugin("build-token-root").isActive());
+            assertEquals("1.2", r.jenkins.pluginManager.getPlugin("jdk-tool").getVersion());
+            /* TODO currently still loads the detached 1.0, since we only skip $shortName.[jh]pi not $shortName-$version.[jh]pi; during PLUGINS_LISTED there is a list of known filenames but not short names
+            assertEquals("1.3", r.jenkins.pluginManager.getPlugin("command-launcher").getVersion());
+            */
+        });
     }
 
     private List<PluginWrapper> getInstalledDetachedPlugins(JenkinsRule r, List<DetachedPlugin> detachedPlugins) {

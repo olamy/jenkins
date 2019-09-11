@@ -84,6 +84,7 @@ import static hudson.PluginWrapper.PluginDisableStatus.ERROR_DISABLING;
 import static hudson.PluginWrapper.PluginDisableStatus.NOT_DISABLED_DEPENDANTS;
 import static hudson.PluginWrapper.PluginDisableStatus.NO_SUCH_PLUGIN;
 import static java.util.logging.Level.WARNING;
+import jenkins.plugins.DetachedPluginsUtil;
 import static org.apache.commons.io.FilenameUtils.getBaseName;
 
 /**
@@ -437,7 +438,7 @@ public class PluginWrapper implements Comparable<PluginWrapper>, ModelObject {
     }
 
     public Api getApi() {
-        Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
+        Jenkins.get().checkPermission(Jenkins.ADMINISTER);
         return new Api(this);
     }
 
@@ -955,7 +956,7 @@ public class PluginWrapper implements Comparable<PluginWrapper>, ModelObject {
      *      the user may have installed a plugin locally developed.
      */
     public UpdateSite.Plugin getUpdateInfo() {
-        UpdateCenter uc = Jenkins.getInstance().getUpdateCenter();
+        UpdateCenter uc = Jenkins.get().getUpdateCenter();
         UpdateSite.Plugin p = uc.getPlugin(getShortName(), getVersionNumber());
         if(p!=null && p.isNewerThan(getVersion())) return p;
         return null;
@@ -965,7 +966,7 @@ public class PluginWrapper implements Comparable<PluginWrapper>, ModelObject {
      * returns the {@link hudson.model.UpdateSite.Plugin} object, or null.
      */
     public UpdateSite.Plugin getInfo() {
-        UpdateCenter uc = Jenkins.getInstance().getUpdateCenter();
+        UpdateCenter uc = Jenkins.get().getUpdateCenter();
         UpdateSite.Plugin p = uc.getPlugin(getShortName(), getVersionNumber());
         if (p != null) return p;
         return uc.getPlugin(getShortName());
@@ -1000,6 +1001,15 @@ public class PluginWrapper implements Comparable<PluginWrapper>, ModelObject {
     }
 
     /**
+     * Same as {@link DetachedPluginsUtil#isDetachedPlugin}.
+     * @since TODO
+     */
+    @Exported
+    public boolean isDetached() {
+        return DetachedPluginsUtil.isDetachedPlugin(shortName);
+    }
+
+    /**
      * Sort by short name.
      */
     public int compareTo(PluginWrapper pw) {
@@ -1018,7 +1028,7 @@ public class PluginWrapper implements Comparable<PluginWrapper>, ModelObject {
      * Where is the backup file?
      */
     public File getBackupFile() {
-        return new File(Jenkins.getInstance().getRootDir(),"plugins/"+getShortName() + ".bak");
+        return new File(Jenkins.get().getRootDir(),"plugins/"+getShortName() + ".bak");
     }
 
     /**
@@ -1194,14 +1204,14 @@ public class PluginWrapper implements Comparable<PluginWrapper>, ModelObject {
 //
     @RequirePOST
     public HttpResponse doMakeEnabled() throws IOException {
-        Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
+        Jenkins.get().checkPermission(Jenkins.ADMINISTER);
         enable();
         return HttpResponses.ok();
     }
 
     @RequirePOST
     public HttpResponse doMakeDisabled() throws IOException {
-        Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
+        Jenkins.get().checkPermission(Jenkins.ADMINISTER);
         disable();
         return HttpResponses.ok();
     }
@@ -1209,7 +1219,7 @@ public class PluginWrapper implements Comparable<PluginWrapper>, ModelObject {
     @RequirePOST
     @Deprecated
     public HttpResponse doPin() throws IOException {
-        Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
+        Jenkins.get().checkPermission(Jenkins.ADMINISTER);
         // See https://groups.google.com/d/msg/jenkinsci-dev/kRobm-cxFw8/6V66uhibAwAJ
         LOGGER.log(WARNING, "Call to pin plugin has been ignored. Plugin name: " + shortName);
         return HttpResponses.ok();
@@ -1218,7 +1228,7 @@ public class PluginWrapper implements Comparable<PluginWrapper>, ModelObject {
     @RequirePOST
     @Deprecated
     public HttpResponse doUnpin() throws IOException {
-        Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
+        Jenkins.get().checkPermission(Jenkins.ADMINISTER);
         // See https://groups.google.com/d/msg/jenkinsci-dev/kRobm-cxFw8/6V66uhibAwAJ
         LOGGER.log(WARNING, "Call to unpin plugin has been ignored. Plugin name: " + shortName);
         return HttpResponses.ok();

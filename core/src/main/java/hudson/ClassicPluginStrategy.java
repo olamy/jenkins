@@ -137,6 +137,7 @@ public class ClassicPluginStrategy implements PluginStrategy {
                 } catch (InvalidPathException e) {
                     throw new IOException(e);
                 }
+                //noinspection StatementWithEmptyBody
                 if (firstLine.startsWith("Manifest-Version:")) {
                     // this is the manifest already
                 } else {
@@ -158,7 +159,7 @@ public class ClassicPluginStrategy implements PluginStrategy {
     @Override public PluginWrapper createPluginWrapper(File archive) throws IOException {
         final Manifest manifest;
 
-        URL baseResourceURL = null;
+        URL baseResourceURL;
         File expandDir = null;
         // if .hpi, this is the directory where war is expanded
 
@@ -184,6 +185,10 @@ public class ClassicPluginStrategy implements PluginStrategy {
                 manifest = new Manifest(fin);
             } catch (InvalidPathException e) {
                 throw new IOException(e);
+            }
+            String canonicalName = manifest.getMainAttributes().getValue("Short-Name") + ".jpi";
+            if (!archive.getName().equals(canonicalName)) {
+                LOGGER.warning(() -> "encountered " + archive + " under a nonstandard name; expected " + canonicalName);
             }
         }
 
@@ -319,7 +324,7 @@ public class ClassicPluginStrategy implements PluginStrategy {
         List<ExtensionFinder> finders;
         if (type==ExtensionFinder.class) {
             // Avoid infinite recursion of using ExtensionFinders to find ExtensionFinders
-            finders = Collections.<ExtensionFinder>singletonList(new ExtensionFinder.Sezpoz());
+            finders = Collections.singletonList(new ExtensionFinder.Sezpoz());
         } else {
             finders = hudson.getExtensionList(ExtensionFinder.class);
         }
