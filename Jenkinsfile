@@ -95,6 +95,8 @@ node('private-core-template-maven3.5.4') {
                                     sh """
                                         rm -rf changes
                                     """
+                                } else {
+                                    abort = false
                                 }
 
                                 // -Dmaven.repo.local=… tells Maven to create a subdir in the temporary directory for the local Maven repository
