@@ -134,6 +134,31 @@ node('private-core-template-maven3.5.4') {
 
             if(!isRelease && !isPR() && isCB()) {
 
+                // Check last changes against exclusion list
+                sh """
+                    touch changes
+                    git diff HEAD^ HEAD --name-only > changes
+                    less changes
+                """
+                def changes = readFile "changes"
+                println exclusions
+                changes.tokenize().each { change ->
+                    if (!exclusions.contains(change)) {
+                        println change
+                        abort = false
+                    }
+                }
+
+                if (abort) {
+                    println "Changes does not affect to perform a new release of private core"
+                    currentBuild.result = 'SUCCESS'
+                    return
+                }
+
+                sh """
+                    rm -rf changes
+                """
+
                 // Release a new private core signed war
                 stage('Release') {
                    cbpjcReleaseSign {
