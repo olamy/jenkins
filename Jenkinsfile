@@ -135,6 +135,7 @@ node('private-core-template-maven3.5.4') {
             if(!isRelease && !isPR() && isCB()) {
 
                 // Check last changes against exclusion list
+                abort = true
                 sh """
                     touch changes
                     git diff HEAD^ HEAD --name-only > changes
