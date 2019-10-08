@@ -213,7 +213,7 @@ boolean isCB() {
 
 def email(id, name) {
     emailNotification {
-        recipient          = 'release-team-notifications@cloudbees.com'
+        recipient          = 'productivity-team@cloudbees.com'
         subject            = "Private Jenkins builder failed - ${name} #${id}"
         template           = 'reporting-job'
         placeholders       = [
