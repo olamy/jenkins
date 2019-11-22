@@ -91,6 +91,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletResponse;
 import javax.xml.transform.Source;
 import javax.xml.transform.TransformerException;
+import javax.xml.transform.sax.SAXSource;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 import java.io.BufferedInputStream;
@@ -949,19 +950,29 @@ public abstract class View extends AbstractModelObject implements AccessControll
             sib.add(item.getSearchUrl(), item.getDisplayName());
         }        
     }
-    
+
+    /**
+     * Add a simple CollectionSearchIndex object to sib
+     *
+     * @param sib the SearchIndexBuilder
+     * @since 2.200
+     */
+    protected void makeSearchIndex(SearchIndexBuilder sib) {
+        sib.add(new CollectionSearchIndex<TopLevelItem>() {// for jobs in the view
+            protected TopLevelItem get(String key) { return getItem(key); }
+            protected Collection<TopLevelItem> all() { return getItems(); }
+            @Override
+            protected String getName(TopLevelItem o) {
+                // return the name instead of the display for suggestion searching
+                return o.getName();
+            }
+        });
+    }
+
     @Override
     public SearchIndexBuilder makeSearchIndex() {
         SearchIndexBuilder sib = super.makeSearchIndex();
-        sib.add(new CollectionSearchIndex<TopLevelItem>() {// for jobs in the view
-                protected TopLevelItem get(String key) { return getItem(key); }
-                protected Collection<TopLevelItem> all() { return getItems(); }
-                @Override
-                protected String getName(TopLevelItem o) {
-                    // return the name instead of the display for suggestion searching
-                    return o.getName();
-                }
-            });
+        makeSearchIndex(sib);
         
         // add the display name for each item in the search index
         addDisplayNamesToSearchIndex(sib, getItems());
@@ -1196,7 +1207,7 @@ public abstract class View extends AbstractModelObject implements AccessControll
     /**
      * Updates the View with the new XML definition.
      * @param source source of the Item's new definition.
-     *               The source should be either a <code>StreamSource</code> or <code>SAXSource</code>, other sources
+     *               The source should be either a {@link StreamSource} or {@link SAXSource}, other sources
      *               may not be handled.
      */
     public void updateByXml(Source source) throws IOException {
@@ -1356,7 +1367,7 @@ public abstract class View extends AbstractModelObject implements AccessControll
     private static View copy(StaplerRequest req, ViewGroup owner, String name) throws IOException {
         View v;
         String from = req.getParameter("from");
-        View src = src = owner.getView(from);
+        View src = owner.getView(from);
 
         if(src==null) {
             if(Util.fixEmpty(from)==null)

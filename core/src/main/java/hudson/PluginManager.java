@@ -23,7 +23,6 @@
  */
 package hudson;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.PluginWrapper.Dependency;
 import hudson.init.InitMilestone;
@@ -160,7 +159,7 @@ import static java.util.logging.Level.*;
  *
  * <p>
  * <b>Setting default Plugin Managers</b>. The default plugin manager in {@code Jenkins} can be replaced by defining a
- * System Property (<code>hudson.PluginManager.className</code>). See {@link #createDefault(Jenkins)}.
+ * System Property ({@code hudson.PluginManager.className}). See {@link #createDefault(Jenkins)}.
  * This className should be available on early startup, so it cannot come only from a library
  * (e.g. Jenkins module or Extra library dependency in the WAR file project).
  * Plugins cannot be used for such purpose.
@@ -210,28 +209,29 @@ public abstract class PluginManager extends AbstractModelObject implements OnMas
     private enum PMConstructor {
         JENKINS {
             @Override
-            @NonNull PluginManager doCreate(@NonNull Class<? extends PluginManager> klass,
-                                            @NonNull Jenkins jenkins) throws ReflectiveOperationException {
+            @Nonnull 
+            PluginManager doCreate(@Nonnull Class<? extends PluginManager> klass,
+                                   @Nonnull Jenkins jenkins) throws ReflectiveOperationException {
                 return klass.getConstructor(Jenkins.class).newInstance(jenkins);
             }
         },
         SC_FILE {
             @Override
-            @NonNull PluginManager doCreate(@NonNull Class<? extends PluginManager> klass,
-                                            @NonNull Jenkins jenkins) throws ReflectiveOperationException {
+            @Nonnull PluginManager doCreate(@Nonnull Class<? extends PluginManager> klass,
+                                            @Nonnull Jenkins jenkins) throws ReflectiveOperationException {
                 return klass.getConstructor(ServletContext.class, File.class).newInstance(jenkins.servletContext, jenkins.getRootDir());
             }
         },
         FILE {
             @Override
-            @NonNull PluginManager doCreate(@NonNull Class<? extends PluginManager> klass,
-                                            @NonNull Jenkins jenkins) throws ReflectiveOperationException {
+            @Nonnull PluginManager doCreate(@Nonnull Class<? extends PluginManager> klass,
+                                            @Nonnull Jenkins jenkins) throws ReflectiveOperationException {
                 return klass.getConstructor(File.class).newInstance(jenkins.getRootDir());
             }
         };
 
-        final @CheckForNull PluginManager create(@NonNull Class<? extends PluginManager> klass,
-                                                 @NonNull Jenkins jenkins) throws ReflectiveOperationException {
+        final @CheckForNull PluginManager create(@Nonnull Class<? extends PluginManager> klass,
+                                                 @Nonnull Jenkins jenkins) throws ReflectiveOperationException {
             try {
                 return doCreate(klass, jenkins);
             } catch(NoSuchMethodException e) {
@@ -240,8 +240,8 @@ public abstract class PluginManager extends AbstractModelObject implements OnMas
             }
         }
 
-        abstract @NonNull PluginManager doCreate(@NonNull Class<? extends PluginManager> klass,
-                                                 @NonNull Jenkins jenkins) throws ReflectiveOperationException;
+        abstract @Nonnull PluginManager doCreate(@Nonnull Class<? extends PluginManager> klass,
+                                                 @Nonnull Jenkins jenkins) throws ReflectiveOperationException;
     }
 
     /**
@@ -251,7 +251,7 @@ public abstract class PluginManager extends AbstractModelObject implements OnMas
      * @return Plugin manager to use. If no custom class is configured or in case of any error, the default
      * {@link LocalPluginManager} is returned.
      */
-    public static @NonNull PluginManager createDefault(@NonNull Jenkins jenkins) {
+    public static @Nonnull PluginManager createDefault(@Nonnull Jenkins jenkins) {
         String pmClassName = SystemProperties.getString(CUSTOM_PLUGIN_MANAGER);
         if (!StringUtils.isBlank(pmClassName)) {
             LOGGER.log(FINE, String.format("Use of custom plugin manager [%s] requested.", pmClassName));
@@ -948,6 +948,7 @@ public abstract class PluginManager extends AbstractModelObject implements OnMas
 
     @Restricted(NoExternalUse.class)
     public void start(List<PluginWrapper> plugins) throws Exception {
+      try (ACLContext context = ACL.as(ACL.SYSTEM)) {
         Jenkins.get().refreshExtensions();
 
         for (PluginWrapper p : plugins) {
@@ -992,6 +993,7 @@ public abstract class PluginManager extends AbstractModelObject implements OnMas
         } catch (ExtensionRefreshException e) {
             throw new IOException("Failed to refresh extensions after installing some plugins", e);
         }
+      }
     }
 
     @Restricted(NoExternalUse.class)
@@ -1115,7 +1117,7 @@ public abstract class PluginManager extends AbstractModelObject implements OnMas
             
             try(final JarFile jarFile = jarURLConnection.getJarFile()) {
                 final JarEntry entry = (entryName != null && jarFile != null) ? jarFile.getJarEntry(entryName) : null;
-                if (entry != null && jarFile != null) {
+                if (entry != null) {
                     try(InputStream i = jarFile.getInputStream(entry)) {
                         byte[] manifestBytes = IOUtils.toByteArray(i);
                         in = new ByteArrayInputStream(manifestBytes);
@@ -1831,15 +1833,7 @@ public abstract class PluginManager extends AbstractModelObject implements OnMas
                     LOGGER.log(WARNING, "No such plugin {0} to install", requestedPlugin.getKey());
                     continue;
                 }
-                if (new VersionNumber(toInstall.version).compareTo(requestedPlugin.getValue()) < 0) {
-                    LOGGER.log(WARNING, "{0} can only be satisfied in @{1}", new Object[] {requestedPlugin, toInstall.version});
-                }
-                if (toInstall.isForNewerHudson()) {
-                    LOGGER.log(WARNING, "{0}@{1} was built for a newer Jenkins", new Object[] {toInstall.name, toInstall.version});
-                }
-                if (toInstall.isForNewerJava()) {
-                    LOGGER.log(WARNING, "{0}@{1} was built for a newer Java", new Object[] {toInstall.name, toInstall.version});
-                }
+                logPluginWarnings(requestedPlugin, toInstall);
                 jobs.add(toInstall.deploy(true));
             } else if (pw.isOlderThan(requestedPlugin.getValue())) { // upgrade
                 UpdateSite.Plugin toInstall = uc.getPlugin(requestedPlugin.getKey(), requestedPlugin.getValue());
@@ -1851,15 +1845,7 @@ public abstract class PluginManager extends AbstractModelObject implements OnMas
                     LOGGER.log(WARNING, "{0}@{1} is no newer than what we already have", new Object[] {toInstall.name, toInstall.version});
                     continue;
                 }
-                if (new VersionNumber(toInstall.version).compareTo(requestedPlugin.getValue()) < 0) {
-                    LOGGER.log(WARNING, "{0} can only be satisfied in @{1}", new Object[] {requestedPlugin, toInstall.version});
-                }
-                if (toInstall.isForNewerHudson()) {
-                    LOGGER.log(WARNING, "{0}@{1} was built for a newer Jenkins", new Object[] {toInstall.name, toInstall.version});
-                }
-                if (toInstall.isForNewerJava()) {
-                    LOGGER.log(WARNING, "{0}@{1} was built for a newer Java", new Object[] {toInstall.name, toInstall.version});
-                }
+                logPluginWarnings(requestedPlugin, toInstall);
                 if (!toInstall.isCompatibleWithInstalledVersion()) {
                     LOGGER.log(WARNING, "{0}@{1} is incompatible with the installed @{2}", new Object[] {toInstall.name, toInstall.version, pw.getVersion()});
                 }
@@ -1867,6 +1853,18 @@ public abstract class PluginManager extends AbstractModelObject implements OnMas
             } // else already good
         }
         return jobs;
+    }
+
+    private void logPluginWarnings(Map.Entry<String, VersionNumber> requestedPlugin, UpdateSite.Plugin toInstall) {
+        if (new VersionNumber(toInstall.version).compareTo(requestedPlugin.getValue()) < 0) {
+            LOGGER.log(WARNING, "{0} can only be satisfied in @{1}", new Object[] {requestedPlugin, toInstall.version});
+        }
+        if (toInstall.isForNewerHudson()) {
+            LOGGER.log(WARNING, "{0}@{1} was built for a newer Jenkins", new Object[] {toInstall.name, toInstall.version});
+        }
+        if (toInstall.isForNewerJava()) {
+            LOGGER.log(WARNING, "{0}@{1} was built for a newer Java", new Object[] {toInstall.name, toInstall.version});
+        }
     }
 
     /**
@@ -1960,7 +1958,7 @@ public abstract class PluginManager extends AbstractModelObject implements OnMas
      * @return the list of results for every plugin and their dependent plugins.
      * @throws IOException see {@link PluginWrapper#disable()}
      */
-    public @NonNull List<PluginWrapper.PluginDisableResult> disablePlugins(@NonNull PluginWrapper.PluginDisableStrategy strategy, @NonNull List<String> plugins) throws IOException {
+    public @Nonnull List<PluginWrapper.PluginDisableResult> disablePlugins(@Nonnull PluginWrapper.PluginDisableStrategy strategy, @Nonnull List<String> plugins) throws IOException {
         // Where we store the results of each plugin disablement
         List<PluginWrapper.PluginDisableResult> results = new ArrayList<>(plugins.size());
 
@@ -2131,7 +2129,7 @@ public abstract class PluginManager extends AbstractModelObject implements OnMas
      * Stores {@link Plugin} instances.
      */
     /*package*/ static final class PluginInstanceStore {
-        final Map<PluginWrapper,Plugin> store = new ConcurrentHashMap<PluginWrapper,Plugin>();
+        final Map<PluginWrapper,Plugin> store = new ConcurrentHashMap<>();
     }
 
     /**
@@ -2174,7 +2172,7 @@ public abstract class PluginManager extends AbstractModelObject implements OnMas
     @Extension @Symbol("pluginUpdate")
     public static final class PluginUpdateMonitor extends AdministrativeMonitor {
 
-        private Map<String, PluginUpdateInfo> pluginsToBeUpdated = new HashMap<String, PluginManager.PluginUpdateMonitor.PluginUpdateInfo>();
+        private Map<String, PluginUpdateInfo> pluginsToBeUpdated = new HashMap<>();
 
         /**
          * Convenience method to ease access to this monitor, this allows other plugins to register required updates.

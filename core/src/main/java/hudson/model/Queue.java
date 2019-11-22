@@ -276,7 +276,14 @@ public class Queue extends ResourceController implements Saveable {
                 return reason;
             }
             for (QueueTaskDispatcher d : QueueTaskDispatcher.all()) {
-                reason = d.canTake(node, item);
+                try {
+                    reason = d.canTake(node, item);
+                } catch (Throwable t) {
+                    // We cannot guarantee the task can be taken by the node because something wrong happened
+                    LOGGER.log(Level.WARNING, t, () -> String.format("Exception evaluating if the node '%s' can take the task '%s'", node.getNodeName(), item.task.getName()));
+                    reason = CauseOfBlockage.fromMessage(Messages._Queue_ExceptionCanTake());
+                }
+
                 if (reason != null) {
                     return reason;
                 }
@@ -1192,7 +1199,13 @@ public class Queue extends ResourceController implements Saveable {
         }
 
         for (QueueTaskDispatcher d : QueueTaskDispatcher.all()) {
-            causeOfBlockage = d.canRun(i);
+            try {
+                causeOfBlockage = d.canRun(i);
+            } catch (Throwable t) {
+                // We cannot guarantee the task can be run because something wrong happened
+                LOGGER.log(Level.WARNING, t, () -> String.format("Exception evaluating if the queue can run the task '%s'", i.task.getName()));
+                causeOfBlockage = CauseOfBlockage.fromMessage(Messages._Queue_ExceptionCanRun());
+            }
             if (causeOfBlockage != null)
                 return causeOfBlockage;
         }
@@ -2842,8 +2855,8 @@ public class Queue extends ResourceController implements Saveable {
 			}
         });
 
-        /**
-         * Reconnect every reference to {@link Queue} by the singleton.
+        /*
+         * Reconnect every reference to Queue by the singleton.
          */
         XSTREAM.registerConverter(new AbstractSingleValueConverter() {
 			@Override
@@ -2871,7 +2884,7 @@ public class Queue extends ResourceController implements Saveable {
         private final WeakReference<Queue> queue;
 
         MaintainTask(Queue queue) {
-            this.queue = new WeakReference<Queue>(queue);
+            this.queue = new WeakReference<>(queue);
         }
 
         private void periodic() {
@@ -2902,7 +2915,7 @@ public class Queue extends ResourceController implements Saveable {
     	}
 
     	public List<T> getAll(Task task) {
-    		List<T> result = new ArrayList<T>();
+    		List<T> result = new ArrayList<>();
     		for (T item: this) {
     			if (item.task.equals(task)) {
     				result.add(item);
@@ -2949,7 +2962,7 @@ public class Queue extends ResourceController implements Saveable {
                 justification = "It will invoke the inherited clear() method according to Java semantics. "
                               + "FindBugs recommends suppressing warnings in such case")
         public void cancelAll() {
-            for (T t : new ArrayList<T>(this))
+            for (T t : new ArrayList<>(this))
                 t.cancel(Queue.this);
             clear();
         }
@@ -2963,10 +2976,10 @@ public class Queue extends ResourceController implements Saveable {
 
         public Snapshot(Set<WaitingItem> waitingList, List<BlockedItem> blockedProjects, List<BuildableItem> buildables,
                         List<BuildableItem> pendings) {
-            this.waitingList = new LinkedHashSet<WaitingItem>(waitingList);
-            this.blockedProjects = new ArrayList<BlockedItem>(blockedProjects);
-            this.buildables = new ArrayList<BuildableItem>(buildables);
-            this.pendings = new ArrayList<BuildableItem>(pendings);
+            this.waitingList = new LinkedHashSet<>(waitingList);
+            this.blockedProjects = new ArrayList<>(blockedProjects);
+            this.buildables = new ArrayList<>(buildables);
+            this.pendings = new ArrayList<>(pendings);
         }
 
         @Override
@@ -3048,7 +3061,7 @@ public class Queue extends ResourceController implements Saveable {
     }
 
     /**
-     * Schedule {@code Queue.save()} call for near future once items change. Ignore all changes until the time the save
+     * Schedule {@link Queue#save()} call for near future once items change. Ignore all changes until the time the save
      * takes place.
      *
      * Once queue is restored after a crash, items stages might not be accurate until the next #maintain() - this is not

@@ -160,6 +160,7 @@ public abstract class Job<JobT extends Job<JobT, RunT>, RunT extends Run<JobT, R
     private transient volatile boolean holdOffBuildUntilUserSave;
 
     /** @deprecated Replaced by {@link BuildDiscarderProperty} */
+    @Deprecated
     private volatile BuildDiscarder logRotator;
 
     /**
@@ -664,7 +665,6 @@ public abstract class Job<JobT extends Job<JobT, RunT>, RunT extends Run<JobT, R
 
     @Override
     public void movedTo(DirectlyModifiableTopLevelItemGroup destination, AbstractItem newItem, File destDir) throws IOException {
-        Job newJob = (Job) newItem; // Missing covariant parameters type here.
         File oldBuildDir = getBuildDir();
         super.movedTo(destination, newItem, destDir);
         File newBuildDir = getBuildDir();
@@ -995,19 +995,8 @@ public abstract class Job<JobT extends Job<JobT, RunT>, RunT extends Run<JobT, R
      *   if not enough builds satisfying the threshold have been found. Never null.
      */
     public List<RunT> getLastBuildsOverThreshold(int numberOfBuilds, Result threshold) {
-        
-        List<RunT> result = new ArrayList<>(numberOfBuilds);
-        
         RunT r = getLastBuild();
-        while (r != null && result.size() < numberOfBuilds) {
-            if (!r.isBuilding() && 
-                 (r.getResult() != null && r.getResult().isBetterOrEqualTo(threshold))) {
-                result.add(r);
-            }
-            r = r.getPreviousBuild();
-        }
-        
-        return result;
+        return r.getBuildsOverThreshold(numberOfBuilds, threshold);
     }
     
     /**
@@ -1568,9 +1557,6 @@ public abstract class Job<JobT extends Job<JobT, RunT>, RunT extends Run<JobT, R
         doConfirmRename(newName).generateResponse(req, rsp, null);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected void checkRename(String newName) throws Failure {
         if (isBuilding()) {

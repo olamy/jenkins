@@ -36,20 +36,24 @@ import javax.annotation.Nonnull;
  * @author Kohsuke Kawaguchi
  * @since 1.494
  */
-@Extension @Symbol("location")
+@Extension(ordinal = JenkinsLocationConfiguration.ORDINAL)
+@Symbol("location")
 public class JenkinsLocationConfiguration extends GlobalConfiguration implements PersistentDescriptor {
 
     /**
      * If disabled, the application will no longer check for URL validity in the configuration page.
      * This will lead to an instance vulnerable to SECURITY-1471.
      *
-     * @since TODO
+     * @since 2.176.4 / 2.197
      */
     @Restricted(NoExternalUse.class)
     @SuppressFBWarnings(value = "MS_SHOULD_BE_FINAL", justification = "Accessible via System Groovy Scripts")
     public static /* not final */ boolean DISABLE_URL_VALIDATION =
             SystemProperties.getBoolean(JenkinsLocationConfiguration.class.getName() + ".disableUrlValidation");
     
+    @Restricted(NoExternalUse.class)
+    public static final int ORDINAL = 200;
+
     /**
      * @deprecated replaced by {@link #jenkinsUrl}
      */

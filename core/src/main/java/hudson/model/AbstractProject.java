@@ -232,7 +232,7 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
      * List of all {@link Trigger}s for this project.
      */
     @AdaptField(was=List.class)
-    protected volatile DescribableList<Trigger<?>,TriggerDescriptor> triggers = new DescribableList<Trigger<?>,TriggerDescriptor>(this);
+    protected volatile DescribableList<Trigger<?>,TriggerDescriptor> triggers = new DescribableList<>(this);
     private static final AtomicReferenceFieldUpdater<AbstractProject,DescribableList> triggersUpdater
             = AtomicReferenceFieldUpdater.newUpdater(AbstractProject.class,DescribableList.class,"triggers");
 
@@ -244,7 +244,7 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
      * come and go as configuration change, so it's kept separate.
      */
     @CopyOnWrite
-    protected transient volatile List<Action> transientActions = new Vector<Action>();
+    protected transient volatile List<Action> transientActions = new Vector<>();
 
     private boolean concurrentBuild;
 
@@ -260,9 +260,8 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
         buildMixIn = createBuildMixIn();
         builds = buildMixIn.getRunMap();
 
-        final Jenkins j = Jenkins.get();
-        final List<Node> nodes = j != null ? j.getNodes() : null;
-        if(nodes!=null && !nodes.isEmpty()) {
+        Jenkins j = Jenkins.getInstanceOrNull();
+        if (j != null && !j.getNodes().isEmpty()) {
             // if a new job is configured with Hudson that already has agent nodes
             // make it roamable by default
             canRoam = true;
@@ -320,7 +319,7 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
             scm = new NullSCM(); // perhaps it was pointing to a plugin that no longer exists.
 
         if(transientActions==null)
-            transientActions = new Vector<Action>();    // happens when loaded from disk
+            transientActions = new Vector<>();    // happens when loaded from disk
         updateTransientActions();
     }
 
@@ -511,6 +510,7 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
      *
      * @return An AbstractBuild for deprecated methods to use.
      */
+    @CheckForNull
     private AbstractBuild getBuildForDeprecatedMethods() {
         Executor e = Executor.currentExecutor();
         if(e!=null) {
@@ -521,9 +521,7 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
                     return b;
             }
         }
-        R lb = getLastBuild();
-        if(lb!=null)    return lb;
-        return null;
+        return getLastBuild();
     }
 
     /**
@@ -554,8 +552,7 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
      * @return null if no such build exists.
      */
     public final R getSomeBuildWithWorkspace() {
-        int cnt=0;
-        for (R b = getLastBuild(); cnt<5 && b!=null; b=b.getPreviousBuild()) {
+        for (R b = getLastBuild(); b != null; b = b.getPreviousBuild()) {
             FilePath ws = b.getWorkspace();
             if (ws!=null)   return b;
         }
@@ -563,8 +560,7 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
     }
 
     private R getSomeBuildWithExistingWorkspace() throws IOException, InterruptedException {
-        int cnt=0;
-        for (R b = getLastBuild(); cnt<5 && b!=null; b=b.getPreviousBuild()) {
+        for (R b = getLastBuild(); b != null; b = b.getPreviousBuild()) {
             FilePath ws = b.getWorkspace();
             if (ws!=null && ws.exists())   return b;
         }
@@ -733,7 +729,7 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
     }
 
     protected List<Action> createTransientActions() {
-        Vector<Action> ta = new Vector<Action>();
+        Vector<Action> ta = new Vector<>();
 
         for (JobProperty<? super P> p : Util.fixNull(properties))
             ta.addAll(p.getJobActions((P)this));
@@ -819,7 +815,7 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
      */
     @WithBridgeMethods(Future.class)
     public QueueTaskFuture<R> scheduleBuild2(int quietPeriod, Cause c, Collection<? extends Action> actions) {
-        List<Action> queueActions = new ArrayList<Action>(actions);
+        List<Action> queueActions = new ArrayList<>(actions);
         if (c != null) {
             queueActions.add(new CauseAction(c));
         }
@@ -989,7 +985,7 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
     @Override
     public List<Action> getActions() {
         // add all the transient actions, too
-        List<Action> actions = new Vector<Action>(super.getActions());
+        List<Action> actions = new Vector<>(super.getActions());
         actions.addAll(transientActions);
         // return the read only list to cause a failure on plugins who try to add an action here
         return Collections.unmodifiableList(actions);
@@ -1129,7 +1125,7 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
     }
 
     public List<SubTask> getSubTasks() {
-        List<SubTask> r = new ArrayList<SubTask>();
+        List<SubTask> r = new ArrayList<>();
         r.add(this);
         for (SubTaskContributor euc : SubTaskContributor.all())
             r.addAll(euc.forProject(this));
@@ -1175,7 +1171,7 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
      */
     public ResourceList getResourceList() {
         final Set<ResourceActivity> resourceActivities = getResourceActivities();
-        final List<ResourceList> resourceLists = new ArrayList<ResourceList>(1 + resourceActivities.size());
+        final List<ResourceList> resourceLists = new ArrayList<>(1 + resourceActivities.size());
         for (ResourceActivity activity : resourceActivities) {
             if (activity != this && activity != null) {
                 // defensive infinite recursion and null check
@@ -1432,7 +1428,6 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
      */
     private boolean isAllSuitableNodesOffline(R build) {
         Label label = getAssignedLabel();
-        List<Node> allNodes = Jenkins.get().getNodes();
 
         if (label != null) {
             //Invalid label. Put in queue to make administrator fix
@@ -1608,7 +1603,7 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
      * @return A List of upstream projects that has a {@link BuildTrigger} to this project.
      */
     public final List<AbstractProject> getBuildTriggerUpstreamProjects() {
-        ArrayList<AbstractProject> result = new ArrayList<AbstractProject>();
+        ArrayList<AbstractProject> result = new ArrayList<>();
         for (AbstractProject<?,?> ap : getUpstreamProjects()) {
             BuildTrigger buildTrigger = ap.getPublishersList().get(BuildTrigger.class);
             if (buildTrigger != null)
@@ -1645,7 +1640,7 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
      *      numbers of that project.
      */
     public SortedMap<Integer, RangeSet> getRelationship(AbstractProject that) {
-        TreeMap<Integer,RangeSet> r = new TreeMap<Integer,RangeSet>(REVERSE_INTEGER_COMPARATOR);
+        TreeMap<Integer,RangeSet> r = new TreeMap<>(REVERSE_INTEGER_COMPARATOR);
 
         checkAndRecord(that, r, this.getBuilds());
         // checkAndRecord(that, r, that.getBuilds());
@@ -1818,7 +1813,7 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
         throws FormException, ServletException {
 
         JSONObject data = req.getSubmittedForm();
-        List<T> r = new Vector<T>();
+        List<T> r = new Vector<>();
         for (Descriptor<T> d : descriptors) {
             String safeName = d.getJsonSafeClassName();
             if (req.getParameter(safeName) != null) {
@@ -2019,7 +2014,7 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
             }
 
             List<String> getSeeds() {
-                ArrayList<String> terms = new ArrayList<String>();
+                ArrayList<String> terms = new ArrayList<>();
                 boolean trailingQuote = source.endsWith("\"");
                 boolean leadingQuote = source.startsWith("\"");
                 boolean trailingSpace = source.endsWith(" ");
@@ -2085,7 +2080,7 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
      * @deprecated Use {@link ParameterizedJobMixIn#BUILD_NOW_TEXT}.
      */
     @Deprecated
-    public static final Message<AbstractProject> BUILD_NOW_TEXT = new Message<AbstractProject>();
+    public static final Message<AbstractProject> BUILD_NOW_TEXT = new Message<>();
 
     /**
      * Used for CLI binding.
