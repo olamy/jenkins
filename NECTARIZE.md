@@ -9,6 +9,9 @@ is whenever we need to nectarize, we do so by merging this branch into it.
 When the community is done with its LTS releases on a `stable-1.xxx` branch and CloudBees is
 ready to take over, or private builds are used the the current LTS line, we do the following:
 
+* First thing is update `nectarize` branch with the changes on the previous LTS merging the `cb.X.Y` into
+  `nectarize` branch: `git merge cb-X.Y`
+
 * Determine the correct 3rd digit for the nectarized version, such as `x.yyy.18`.
   This 3rd digit is kept the same across all the sustaining LTS branches that are
   actively maintained, so the easiest way is to find this is to check out the previous
@@ -18,12 +21,13 @@ ready to take over, or private builds are used the the current LTS line, we do t
   starting at 1.
 
 * Created a `cb-x.yyy` branch from the `community-x.yyy` repo (which should be in sync with the community repo).
-
-* Run `mvn release:update-versions -DdevelopmentVersion=x.yyy.zz-cb-w-SNAPSHOT` on
+  ### Until version 2.190 LTS
+  * Run `mvn release:update-versions -DdevelopmentVersion=x.yyy.zz-cb-w-SNAPSHOT` on
   the workspace from the previous step. If unsure, see commit d08cf489bce4ab8f109c59b1ce3aaec7a87d3298
   for an actual example of how this was done. This step reduces the merge conflict in the next step.
-* Only if incremental is enabled (from 2.138 LTS onwards), then run also `mvn -V -B io.jenkins.tools.incrementals:incrementals-maven-plugin:reincrementalify`. Further details: https://github.com/jenkinsci/incrementals-tools#running-maven-releases
-
+  * Only if incremental is enabled (from 2.138 LTS onwards), then run also `mvn -V -B   io.jenkins.tools.incrementals:incrementals-maven-plugin:reincrementalify`. Further details: https://github.com/jenkinsci/incrementals-tools#running-maven-releases
+  ### From version 2.191 LTS
+  * Run `mvn versions:set-property -Dproperty=revision -DnewVersion=x.yyy.zz-cb-w`
 
 * Run `git merge nectarize` to merge the tip of the `nectarize`.
   If this step results in merge conflicts, *DO NOT RESOLVE merge conflicts here*. Instead,
