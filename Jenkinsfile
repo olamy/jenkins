@@ -108,7 +108,7 @@ k8sNode('private-core-template-maven3.5.4') {
                                 def pom = readMavenPom()
                                 jenkinsVersion = pom.version?.replaceAll('-SNAPSHOT', '')
                                 urrBranch += jenkinsVersion.substring(0,5)
-                                
+
                                 if (jenkinsVersion.endsWith("cb-1")) {
                                     // there is a new core version, so to bump URR is needed
                                     urrVersion = jenkinsVersion.substring(0,7) + ".1-SNAPSHOT"
@@ -149,7 +149,6 @@ k8sNode('private-core-template-maven3.5.4') {
                         abort = false
                     }
                 }
-
                 if (abort) {
                     println "Changes does not affect to perform a new release of private core"
                     currentBuild.result = 'SUCCESS'
