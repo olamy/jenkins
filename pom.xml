@@ -52,7 +52,6 @@ THE SOFTWARE.
     <module>bom</module>
     <module>core</module>
     <module>war</module>
-    <module>test-pom</module>
     <module>test</module>
     <module>cli</module>
   </modules>
@@ -82,7 +81,7 @@ THE SOFTWARE.
   </issueManagement>
 
   <properties>
-    <revision>2.204.3-cb-5</revision>
+    <revision>2.222.1</revision>
     <changelist>-SNAPSHOT</changelist>
 
     <!-- *.html files are in UTF-8, and *.properties are in iso-8859-1, so this configuration is actually incorrect,
@@ -109,7 +108,7 @@ THE SOFTWARE.
     <maven-war-plugin.version>3.2.3</maven-war-plugin.version>
 
     <!-- Bundled Remoting version -->
-    <remoting.version>3.36.1</remoting.version>
+    <remoting.version>4.2</remoting.version>
     <!-- Minimum Remoting version, which is tested for API compatibility -->
     <remoting.minimum.supported.version>3.14</remoting.minimum.supported.version>
 
@@ -119,8 +118,8 @@ THE SOFTWARE.
     <findbugs.excludeFilterFile>${project.basedir}/../src/findbugs/findbugs-excludes.xml</findbugs.excludeFilterFile>
 
     <!-- TODO keep these in sync -->
-    <access-modifier-annotation.version>1.14</access-modifier-annotation.version>
-    <access-modifier-checker.version>1.14</access-modifier-checker.version>
+    <access-modifier-annotation.version>1.16</access-modifier-annotation.version>
+    <access-modifier-checker.version>1.16</access-modifier-checker.version>
   </properties>
 
   <dependencyManagement>
@@ -363,12 +362,6 @@ THE SOFTWARE.
           <artifactId>maven-pmd-plugin</artifactId>
         </plugin>
         <plugin>
-          <!-- this is really just a patched version of maven-jetty-plugin to workaround issue #932 -->
-          <groupId>org.jenkins-ci.tools</groupId>
-          <artifactId>maven-jenkins-dev-plugin</artifactId>
-          <version>9.4.12.v20180830-jenkins-2</version>
-        </plugin>
-        <plugin>
           <groupId>org.jvnet.updatecenter2</groupId>
           <artifactId>maven-makepkgs-plugin</artifactId>
           <version>0.6.2</version>
@@ -410,6 +403,20 @@ THE SOFTWARE.
         <plugin>
 	        <groupId>org.codehaus.mojo</groupId>
 	        <artifactId>animal-sniffer-maven-plugin</artifactId>
+        </plugin>
+        <plugin>
+          <groupId>com.github.spotbugs</groupId>
+          <artifactId>spotbugs-maven-plugin</artifactId>
+          <configuration>
+            <plugins>
+              <plugin>
+                <groupId>com.h3xstream.findsecbugs</groupId>
+                <artifactId>findsecbugs-plugin</artifactId>
+                <version>1.10.1</version>
+              </plugin>
+            </plugins>
+            <maxHeap>768</maxHeap>
+          </configuration>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -518,15 +525,6 @@ THE SOFTWARE.
           </execution>
         </executions>
 
-      </plugin>
-
-      <plugin>
-        <!--
-          Since some developers try to run hudson-dev:run from main, define it here so that at least the plugin resolves.
-          This enables us to report a better error message.
-        -->
-        <groupId>org.jenkins-ci.tools</groupId>
-        <artifactId>maven-jenkins-dev-plugin</artifactId>
       </plugin>
     </plugins>
 
@@ -668,15 +666,6 @@ THE SOFTWARE.
       </properties>
       <activation>
         <jdk>11</jdk>
-      </activation>
-    </profile>
-    <profile>
-      <id>jdk8</id>
-      <modules>
-        <module>test-jdk8</module>
-      </modules>
-      <activation>
-        <jdk>1.8</jdk>
       </activation>
     </profile>
   </profiles>

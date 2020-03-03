@@ -35,7 +35,8 @@ import hudson.ExtensionPoint;
 import hudson.Util;
 import hudson.XmlFile;
 import hudson.init.Initializer;
-import static hudson.init.InitMilestone.JOB_LOADED;
+
+import static hudson.init.InitMilestone.JOB_CONFIG_ADAPTED;
 import static hudson.util.Iterators.reverse;
 
 import hudson.cli.declarative.CLIResolver;
@@ -132,6 +133,8 @@ import com.thoughtworks.xstream.converters.basic.AbstractSingleValueConverter;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnegative;
+import javax.servlet.http.HttpServletResponse;
+
 import jenkins.model.queue.AsynchronousExecution;
 import jenkins.model.queue.CompositeCauseOfBlockage;
 import org.kohsuke.stapler.QueryParameter;
@@ -760,17 +763,21 @@ public class Queue extends ResourceController implements Saveable {
     }
 
     /**
-     * Called from {@code queue.jelly} and {@code entries.jelly}.
+     * Called from {@code queue.jelly} and {@code queue-items.jelly}.
      */
     @RequirePOST
     public HttpResponse doCancelItem(@QueryParameter long id) throws IOException, ServletException {
         Item item = getItem(id);
         if (item != null) {
             if(item.hasCancelPermission()){
-                cancel(item);
+                if(cancel(item)) {
+                    return HttpResponses.status(HttpServletResponse.SC_NO_CONTENT);
+                }
+                return HttpResponses.error(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Could not cancel run for id " + id);
             }
+            return HttpResponses.error(422, "Item for id (" + id + ") is not cancellable");
         } // else too late, ignore (JENKINS-14813)
-        return HttpResponses.forwardToPreviousPage();
+        return HttpResponses.error(HttpServletResponse.SC_NOT_FOUND, "Provided id (" + id + ") not found");
     }
 
     public boolean isEmpty() {
@@ -1724,18 +1731,23 @@ public class Queue extends ResourceController implements Saveable {
 
             Label lbl = p.getAssignedLabel();
 
+            Computer masterComputer = h.toComputer();
             if (lbl != null && lbl.equals(h.getSelfLabel())) {
+                // the flyweight task is bound to the master
                 if (h.canTake(p) == null) {
-                    return createFlyWeightTaskRunnable(p, h.toComputer());
+                    return createFlyWeightTaskRunnable(p, masterComputer);
                 } else {
                     return null;
                 }
             }
 
-            Map<Node, Integer> hashSource = new HashMap<>(h.getNodes().size());
+            if (lbl == null && h.canTake(p) == null && masterComputer.isOnline() && masterComputer.isAcceptingTasks()) {
+                // The flyweight task is not tied to a specific label, so execute on master if possible.
+                // This will ensure that actual agent disconnects do not impact flyweight tasks randomly assigned to them.
+                return createFlyWeightTaskRunnable(p, masterComputer);
+            }
 
-            // Even if master is configured with zero executors, we may need to run a flyweight task like MatrixProject on it.
-            hashSource.put(h, Math.max(h.getNumExecutors() * 100, 1));
+            Map<Node, Integer> hashSource = new HashMap<>(h.getNodes().size());
 
             for (Node n : h.getNodes()) {
                 hashSource.put(n, n.getNumExecutors() * 100);
@@ -2298,11 +2310,11 @@ public class Queue extends ResourceController implements Saveable {
         /** @deprecated Use {@link #doCancelItem} instead. */
         @Deprecated
         @RequirePOST
-        public HttpResponse doCancelQueue() throws IOException, ServletException {
+        public HttpResponse doCancelQueue() {
             if(hasCancelPermission()){
                 Jenkins.get().getQueue().cancel(this);
             }
-            return HttpResponses.forwardToPreviousPage();
+            return HttpResponses.status(HttpServletResponse.SC_NO_CONTENT);
         }
 
         /**
@@ -2406,6 +2418,7 @@ public class Queue extends ResourceController implements Saveable {
      */
     @Restricted(NoExternalUse.class)
     @ExportedBean(defaultVisibility = 999)
+    @SuppressFBWarnings(value = "URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD", justification = "it is exported, so it might be used")
     public class StubItem {
 
         @Exported public StubTask task;
@@ -2487,13 +2500,7 @@ public class Queue extends ResourceController implements Saveable {
             int r = this.timestamp.getTime().compareTo(that.timestamp.getTime());
             if (r != 0) return r;
 
-            if (this.getId() < that.getId()) {
-                return -1;
-            } else if (this.getId() == that.getId()) {
-                return 0;
-            } else {
-                return 1;
-            }
+            return Long.compare(this.getId(), that.getId());
         }
 
         public CauseOfBlockage getCauseOfBlockage() {
@@ -3055,7 +3062,7 @@ public class Queue extends ResourceController implements Saveable {
     /**
      * Restores the queue content during the start up.
      */
-    @Initializer(after=JOB_LOADED)
+    @Initializer(after=JOB_CONFIG_ADAPTED)
     public static void init(Jenkins h) {
         h.getQueue().load();
     }
