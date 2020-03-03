@@ -42,6 +42,7 @@ import jenkins.util.SystemProperties;
 import hudson.Util;
 import hudson.XmlFile;
 import static hudson.init.InitMilestone.PLUGINS_STARTED;
+import static java.util.logging.Level.FINEST;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 
@@ -117,6 +118,7 @@ import java.util.jar.JarFile;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
+import jenkins.util.Timer;
 import org.apache.commons.io.IOUtils;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
@@ -206,6 +208,9 @@ public class UpdateCenter extends AbstractModelObject implements Saveable, OnMas
     private UpdateCenterConfiguration config;
 
     private boolean requiresRestart;
+
+    /** @see #isSiteDataReady */
+    private transient volatile boolean siteDataLoading;
 
     static {
         Logger logger = Logger.getLogger(UpdateCenter.class.getName());
@@ -537,6 +542,27 @@ public class UpdateCenter extends AbstractModelObject implements Saveable, OnMas
     @StaplerDispatchable // referenced by _api.jelly
     public PersistedList<UpdateSite> getSites() {
         return sites;
+    }
+
+    /**
+     * Whether it is <em>probably</em> safe to call all {@link UpdateSite#getData} without blocking.
+     * @return true if all data is <em>currently</em> ready (or absent);
+     *         false if some is not ready now (but it will be loaded in the background)
+     */
+    @Restricted(NoExternalUse.class)
+    public boolean isSiteDataReady() {
+        if (sites.stream().anyMatch(UpdateSite::hasUnparsedData)) {
+            if (!siteDataLoading) {
+                siteDataLoading = true;
+                Timer.get().submit(() -> {
+                    sites.forEach(UpdateSite::getData);
+                    siteDataLoading = false;
+                });
+            }
+            return false;
+        } else {
+            return true;
+        }
     }
 
     /**
@@ -927,6 +953,7 @@ public class UpdateCenter extends AbstractModelObject implements Saveable, OnMas
                 sites.add(createDefaultUpdateSite());
             }
         }
+        siteDataLoading = false;
     }
 
     protected UpdateSite createDefaultUpdateSite() {
@@ -1059,7 +1086,12 @@ public class UpdateCenter extends AbstractModelObject implements Saveable, OnMas
             return Messages.UpdateCenter_CoreUpdateMonitor_DisplayName();
         }
 
+        @Override
         public boolean isActivated() {
+            if (!Jenkins.get().getUpdateCenter().isSiteDataReady()) {
+                // Do not display monitor during this page load, but possibly later.
+                return false;
+            }
             Data data = getData();
             return data!=null && data.hasCoreUpdates();
         }
@@ -1985,7 +2017,7 @@ public class UpdateCenter extends AbstractModelObject implements Saveable, OnMas
         }
 
         if (result512 == VerificationResult.NOT_PROVIDED && result256 == VerificationResult.NOT_PROVIDED) {
-            LOGGER.log(INFO, "Attempt to verify a downloaded file (" + file.getName() + ") using SHA-512 or SHA-256 failed since your configured update site does not provide either of those checksums. Falling back to SHA-1.");
+            LOGGER.log(FINEST, "Attempt to verify a downloaded file (" + file.getName() + ") using SHA-512 or SHA-256 failed since your configured update site does not provide either of those checksums. Falling back to SHA-1.");
         }
 
         VerificationResult result1 = verifyChecksums(entry.getSha1(), job.getComputedSHA1(), true);
