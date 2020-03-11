@@ -531,34 +531,6 @@ THE SOFTWARE.
   </build>
 
   <profiles>
-    <profile>
-      <!-- sign war -->
-      <id>sign</id>
-      <build>
-        <plugins>
-          <plugin>
-            <artifactId>maven-jarsigner-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>signWar</id>
-                <phase>pre-integration-test</phase>
-                <goals>
-                  <goal>sign</goal>
-                </goals>
-                <configuration>
-                  <archive>${project.build.directory}/${project.build.finalName}.war</archive>
-                  <arguments>
-                    <argument>-tsa</argument>
-                    <argument>http://timestamp.comodoca.com/rfc3161</argument>
-                  </arguments>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-
 
     <!--
         The following profiles are required to integration the node/yarn build into this maven build.
