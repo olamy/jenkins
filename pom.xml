@@ -155,7 +155,7 @@ THE SOFTWARE.
         <!-- the old artifactID for the servlet API -->
         <artifactId>servlet-api</artifactId>
         <version>[0]</version>
-        <!--
+        <!-- 
               "[0]" is a range that must be exaclty 0
               this is different to "0" which is hint to use version 0.
               therefore unless anyone else uses ranges (they should not) this version will always win
@@ -221,6 +221,10 @@ THE SOFTWARE.
             <fork>true</fork>
             <compilerReuseStrategy>alwaysNew</compilerReuseStrategy>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-gpg-plugin</artifactId>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -612,8 +616,26 @@ THE SOFTWARE.
               </execution>
             </executions>
           </plugin>
+          <plugin>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
         </plugins>
       </build>
+    </profile>
+    <profile>
+      <id>lts-release</id>
+      <properties>
+        <changelog.url>https://release-notes.cloudbees.com/product/Jenkins+OSS+LTS</changelog.url>
+      </properties>
     </profile>
     <profile>
       <id>m2e</id>
