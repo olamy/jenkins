@@ -222,10 +222,10 @@ THE SOFTWARE.
             <compilerReuseStrategy>alwaysNew</compilerReuseStrategy>
           </configuration>
         </plugin>
-        <plugin>
+        <!--<plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-gpg-plugin</artifactId>
-        </plugin>
+        </plugin>-->
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-install-plugin</artifactId>
@@ -616,7 +616,7 @@ THE SOFTWARE.
               </execution>
             </executions>
           </plugin>
-          <plugin>
+          <!--<plugin>
             <artifactId>maven-gpg-plugin</artifactId>
             <executions>
               <execution>
@@ -627,7 +627,7 @@ THE SOFTWARE.
                 </goals>
               </execution>
             </executions>
-          </plugin>
+          </plugin>-->
         </plugins>
       </build>
     </profile>
