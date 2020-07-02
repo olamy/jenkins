@@ -57,17 +57,22 @@ THE SOFTWARE.
   </modules>
 
   <scm>
-    <connection>scm:git:git://github.com/jenkinsci/jenkins.git</connection>
-    <developerConnection>scm:git:ssh://git@github.com/jenkinsci/jenkins.git</developerConnection>
-    <url>https://github.com/jenkinsci/jenkins</url>
-    <tag>${scmTag}</tag>
+    <connection>scm:git:https://github.com/cloudbees-oss/private-jenkins.git</connection>
+    <developerConnection>scm:git:https://github.com/cloudbees-oss/private-jenkins.git</developerConnection>
+    <tag>HEAD</tag>
   </scm>
 
   <distributionManagement>
-    <site>
-      <id>github-pages</id>
-      <url>gitsite:git@github.com/jenkinsci/maven-site.git:core</url>
-    </site>
+    <snapshotRepository>
+      <id>cloudbees-internal-snapshots</id>
+      <name>CloudBees Internal Snapshots</name>
+      <url>${cloudbeesInternalDistMgmtSnapshotsUrl}</url>
+    </snapshotRepository>
+    <repository>
+      <id>cloudbees-internal-staging</id>
+      <name>CloudBees Internal Release Repository</name>
+      <url>${cloudbeesInternalDistMgmtReleasesUrl}</url>
+    </repository>
   </distributionManagement>
 
   <issueManagement>
@@ -76,7 +81,7 @@ THE SOFTWARE.
   </issueManagement>
 
   <properties>
-    <revision>2.235.2</revision>
+    <revision>2.235.2-cb-2</revision>
     <changelist>-SNAPSHOT</changelist>
 
     <!-- *.html files are in UTF-8, and *.properties are in iso-8859-1, so this configuration is actually incorrect,
@@ -95,8 +100,10 @@ THE SOFTWARE.
     <sorcerer.version>0.11</sorcerer.version>
     <animal.sniffer.skip>${skipTests}</animal.sniffer.skip>
     <java.level>8</java.level>
+    <cloudbeesInternalDistMgmtSnapshotsUrl>https://nexus-internal.cloudbees.com/content/repositories/snapshots</cloudbeesInternalDistMgmtSnapshotsUrl>
+    <cloudbeesInternalDistMgmtReleasesUrl>https://nexus-internal.cloudbees.com/service/local/staging/deploy/maven2</cloudbeesInternalDistMgmtReleasesUrl>
 
-    <changelog.url>https://jenkins.io/changelog</changelog.url>
+    <changelog.url>https://release-notes.cloudbees.com/product/Jenkins+OSS+LTS</changelog.url>
 
     <maven-war-plugin.version>3.2.3</maven-war-plugin.version>
 
@@ -114,24 +121,6 @@ THE SOFTWARE.
     <access-modifier-annotation.version>1.16</access-modifier-annotation.version>
     <access-modifier-checker.version>1.16</access-modifier-checker.version>
   </properties>
-
-  <!-- Note that the 'repositories' and 'pluginRepositories' blocks below are actually copy-pasted
-       from the Jenkins org pom. This is on purpose to keep jenkins core buildable even if one has
-       *not* defined the specific details in the settings.xml file. -->
-  <repositories>
-    <repository>
-      <id>repo.jenkins-ci.org</id>
-      <url>https://repo.jenkins-ci.org/public/</url>
-      <!-- allow snapshots -->
-    </repository>
-  </repositories>
-
-  <pluginRepositories>
-    <pluginRepository>
-      <id>repo.jenkins-ci.org</id>
-      <url>https://repo.jenkins-ci.org/public/</url>
-    </pluginRepository>
-  </pluginRepositories>
 
   <dependencyManagement>
     <!-- any dependencies that can be used by plugins must be defined in the bom and not here -->
@@ -233,10 +222,10 @@ THE SOFTWARE.
             <compilerReuseStrategy>alwaysNew</compilerReuseStrategy>
           </configuration>
         </plugin>
-        <plugin>
+        <!--<plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-gpg-plugin</artifactId>
-        </plugin>
+        </plugin>-->
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-install-plugin</artifactId>
@@ -275,18 +264,30 @@ THE SOFTWARE.
         </plugin>
         <plugin>
           <artifactId>maven-jarsigner-plugin</artifactId>
-          <version>1.2</version>
-          <configuration>
-            <!--
-              during the development, debug profile will cause
-              the jars to be signed by a self-certified dummy public key.
-
-              For release, you should define the real values in ~/.m2/settings.xml
-            -->
-            <alias>${hudson.sign.alias}</alias>
-            <storepass>${hudson.sign.storepass}</storepass>
-            <keystore>${hudson.sign.keystore}</keystore>
-          </configuration>
+          <version>1.4</version>
+          <executions>
+            <execution>
+              <id>sign-war</id>
+              <phase>verify</phase>
+              <goals>
+                <goal>sign</goal>
+              </goals>
+              <configuration>
+                <!--
+                    during the development, debug profile defined in ../pom.xml will cause
+                    the jars to be signed by a self-certified dummy public key.
+                    For release, you should define the real values in ~/.m2/settings.xml
+                -->
+                <alias>${cloudbees.sign.alias}</alias>
+                <keystore>${cloudbees.sign.keystore}</keystore>
+                <storepass>${cloudbees.sign.storepass}</storepass>
+                <keypass>${cloudbees.sign.keypass}</keypass>
+                <removeExistingSignatures>true</removeExistingSignatures>
+                <processAttachedArtifacts>false</processAttachedArtifacts>
+                <tsa>http://timestamp.digicert.com</tsa>
+              </configuration>
+            </execution>
+          </executions>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -448,6 +449,25 @@ THE SOFTWARE.
 
     <plugins>
       <plugin>
+        <groupId>org.sonatype.plugins</groupId>
+        <artifactId>nexus-staging-maven-plugin</artifactId>
+        <version>1.6.7</version>
+        <extensions>true</extensions>
+        <configuration>
+          <serverId>cloudbees-internal-staging</serverId>
+          <nexusUrl>https://nexus-internal.cloudbees.com/</nexusUrl>
+          <stagingProfileId>ac6439af20821</stagingProfileId>
+          <tags>
+            <localUsername>${env.USER}</localUsername>
+            <javaVersion>${java.version}</javaVersion>
+          </tags>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
         <artifactId>maven-release-plugin</artifactId>
         <configuration>
           <!-- enable release profile during the release, create IPS package, and sign bits. -->
@@ -455,7 +475,7 @@ THE SOFTWARE.
           <!-- work around for a bug in javadoc plugin that causes the release to fail. see MRELEASE-271 -->
           <preparationGoals>clean install</preparationGoals>
           <goals>-DskipTests -Danimal.sniffer.skip=false javadoc:javadoc deploy</goals>
-          <pushChanges>false</pushChanges>
+          <pushChanges>true</pushChanges>
           <localCheckout>true</localCheckout>
           <tagNameFormat>jenkins-@{project.version}</tagNameFormat>
         </configuration>
@@ -621,7 +641,7 @@ THE SOFTWARE.
               </execution>
             </executions>
           </plugin>
-          <plugin>
+          <!--<plugin>
             <artifactId>maven-gpg-plugin</artifactId>
             <executions>
               <execution>
@@ -632,14 +652,14 @@ THE SOFTWARE.
                 </goals>
               </execution>
             </executions>
-          </plugin>
+          </plugin>-->
         </plugins>
       </build>
     </profile>
     <profile>
       <id>lts-release</id>
       <properties>
-        <changelog.url>https://jenkins.io/changelog-stable</changelog.url>
+        <changelog.url>https://release-notes.cloudbees.com/product/Jenkins+OSS+LTS</changelog.url>
       </properties>
     </profile>
     <profile>
