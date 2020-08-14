@@ -109,9 +109,14 @@ k8sNode('private-core-template-maven3.5.4') {
                                 jenkinsVersion = pom.version?.replaceAll('-SNAPSHOT', '')
                                 urrBranch += jenkinsVersion.substring(0,5)
 
-                                if (jenkinsVersion.endsWith("cb-1")) {
+                                if (jenkinsVersion.endsWith("-cb-1")) {
                                     // there is a new core version, so to bump URR is needed
-                                    urrVersion = jenkinsVersion.substring(0,7) + ".1-SNAPSHOT"
+                                    urrVersion = jenkinsVersion.split("-cb-1")[0]
+                                    if (urrVersion.length() == 8) { // Fixed line
+                                        urrVersion = urrVersion + ".0.1-SNAPSHOT"
+                                    } else {
+                                        urrVersion = urrVersion + ".1-SNAPSHOT"
+                                    }
                                     commands = 'mvn versions:set-property -Dproperty=jenkins.version -DnewVersion=' + jenkinsVersion + ' && mvn versions:set -DnewVersion=' + urrVersion + ' && mvn envelope:validate -Denvelope.checkDetached=false'
                                     println "URR VERSION: " + urrVersion
                                 } else {
