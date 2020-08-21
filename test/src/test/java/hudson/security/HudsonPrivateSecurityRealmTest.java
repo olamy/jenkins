@@ -53,7 +53,13 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.xml.HasXPath.hasXPath;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.commons.lang.StringUtils;
 
@@ -288,7 +294,7 @@ public class HudsonPrivateSecurityRealmTest {
 
         createAccountByAdmin("alice");
         // no new event in such case
-        assertEquals(true, spySecurityListener.loggedInUsernames.isEmpty());
+        assertTrue(spySecurityListener.loggedInUsernames.isEmpty());
 
         selfRegistration("bob");
         assertEquals("bob", spySecurityListener.loggedInUsernames.get(0));

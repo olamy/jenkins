@@ -37,19 +37,24 @@ import hudson.security.ACL;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Arrays;
 import jenkins.model.Jenkins;
 import jenkins.security.apitoken.ApiTokenTestHelper;
 import org.acegisecurity.context.SecurityContext;
 import org.acegisecurity.context.SecurityContextHolder;
-import org.apache.commons.httpclient.HttpStatus;
 
 import org.junit.Before;
 import org.junit.Test;
 
 import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import org.jvnet.hudson.test.Issue;
@@ -237,7 +242,7 @@ public class ItemsTest {
                         .withRedirectEnabled(false)
                         .withThrowExceptionOnFailingStatusCode(false);
                 WebResponse webResponse = wc.getPage(new WebRequest(new URL(wc.getContextPath() + "createItem?name=" + target + "&mode=hudson.model.FreeStyleProject"), HttpMethod.POST)).getWebResponse();
-                if (webResponse.getStatusCode() != HttpStatus.SC_MOVED_TEMPORARILY) {
+                if (webResponse.getStatusCode() != HttpURLConnection.HTTP_MOVED_TEMP) {
                     throw new FailingHttpStatusCodeException(webResponse);
                 }
             }
@@ -251,7 +256,7 @@ public class ItemsTest {
                         .withThrowExceptionOnFailingStatusCode(false);
                 WebResponse webResponse = wc.getPage(new WebRequest(new URL(wc.getContextPath() + "createItem?name=" + target + "&mode=copy&from=dupe"), HttpMethod.POST)).getWebResponse();
                 r.jenkins.getItem("dupe").delete();
-                if (webResponse.getStatusCode() != HttpStatus.SC_MOVED_TEMPORARILY) {
+                if (webResponse.getStatusCode() != HttpURLConnection.HTTP_MOVED_TEMP) {
                     throw new FailingHttpStatusCodeException(webResponse);
                 }
             }
@@ -274,7 +279,7 @@ public class ItemsTest {
                         .withRedirectEnabled(false)
                         .withThrowExceptionOnFailingStatusCode(false);
                 WebResponse webResponse = wc.getPage(new WebRequest(new URL(wc.getContextPath() + "job/dupe/doRename?newName=" + target), HttpMethod.POST)).getWebResponse();
-                if (webResponse.getStatusCode() != HttpStatus.SC_MOVED_TEMPORARILY) {
+                if (webResponse.getStatusCode() != HttpURLConnection.HTTP_MOVED_TEMP) {
                     r.jenkins.getItem("dupe").delete();
                     throw new FailingHttpStatusCodeException(webResponse);
                 }
@@ -325,7 +330,7 @@ public class ItemsTest {
             }
         };
         abstract void run(JenkinsRule r, String target) throws Exception;
-        private static final JenkinsRule.WebClient wc(JenkinsRule r) throws Exception {
+        private static final JenkinsRule.WebClient wc(JenkinsRule r) {
             return r.createWebClient().withBasicApiToken("attacker");
         }
     }
