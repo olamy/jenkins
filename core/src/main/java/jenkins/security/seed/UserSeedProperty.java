@@ -69,7 +69,6 @@ public class UserSeedProperty extends UserProperty {
     /**
      * Hide the user seed section from the UI to prevent accidental use
      */
-    @Restricted(NoExternalUse.class)
     public static /* Script Console modifiable */ boolean HIDE_USER_SEED_SECTION = SystemProperties.getBoolean(UserSeedProperty.class.getName() + ".hideUserSeedSection");
 
     public static final String USER_SESSION_SEED = "_JENKINS_SESSION_SEED";

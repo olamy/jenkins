@@ -1,136 +1,227 @@
-#!/usr/bin/env groovy
-
 /*
- * This Jenkinsfile is intended to run on https://ci.jenkins.io and may fail anywhere else.
+ * This Jenkinsfile is intended to run on https://rosie.gauntlet.cloudbees.com and may fail anywhere else.
  * It makes assumptions about plugins being installed, labels mapping to nodes that can build what is needed, etc.
+ *
+ * This Jenkinsfile is a subset of the community one version 2.73
+ *
+ * Dependencies:
+ *  - https://github.com/cloudbees/rosie-libs
  */
 
-def buildNumber = BUILD_NUMBER as int; if (buildNumber > 1) milestone(buildNumber - 1); milestone(buildNumber) // JENKINS-43353 / JENKINS-58625
+@Library('rosie-libs') _
 
 // TEST FLAG - to make it easier to turn on/off unit tests for speeding up access to later stuff.
 def runTests = true
-def failFast = false
 
-properties([buildDiscarder(logRotator(numToKeepStr: '50', artifactNumToKeepStr: '3')), durabilityHint('PERFORMANCE_OPTIMIZED')])
+// Private core jenkins branch to release private signed war
+def branch = env.BRANCH_NAME
 
-// TODO: Restore 'Windows' once https://groups.google.com/forum/#!topic/jenkinsci-dev/v9d-XosOp2s is resolved
-def buildTypes = ['Linux']
-def jdks = [8, 11]
+// URR bump version and automated RFC pull request creation
+def urrBranch = "stable-"
+def urrBranchName = UUID.randomUUID().toString()
+def cred = env.GITHUB_CREDENTIALS
+def token = getToken(cred)
 
-def builds = [:]
-for(i = 0; i < buildTypes.size(); i++) {
-for(j = 0; j < jdks.size(); j++) {
-    def buildType = buildTypes[i]
-    def jdk = jdks[j]
-    builds["${buildType}-jdk${jdk}"] = {
-        // see https://github.com/jenkins-infra/documentation/blob/master/ci.adoc#node-labels for information on what node types are available
-        node(buildType == 'Linux' ? (jdk == 8 ? 'maven' : 'maven-11') : buildType.toLowerCase()) {
-                // First stage is actually checking out the source. Since we're using Multibranch
-                // currently, we can use "checkout scm".
-                stage('Checkout') {
-                    checkout scm
-                }
+// Jenkins version
+def jenkinsVersion = ""
 
-                def changelistF = "${pwd tmp: true}/changelist"
-                def m2repo = "${pwd tmp: true}/m2repo"
+// URR version
+def urrVersion = ""
 
-                // Now run the actual build.
-                stage("${buildType} Build / Test") {
-                    timeout(time: 180, unit: 'MINUTES') {
-                        // See below for what this method does - we're passing an arbitrary environment
-                        // variable to it so that JAVA_OPTS and MAVEN_OPTS are set correctly.
-                        withMavenEnv(["JAVA_OPTS=-Xmx1536m -Xms512m",
-                                    "MAVEN_OPTS=-Xmx1536m -Xms512m"], buildType, jdk) {
-                            // Actually run Maven!
-                            // -Dmaven.repo.local=… tells Maven to create a subdir in the temporary directory for the local Maven repository
-                            def mvnCmd = "mvn -Pdebug -U -Dset.changelist help:evaluate -Dexpression=changelist -Doutput=$changelistF clean install ${runTests ? '-Dmaven.test.failure.ignore' : '-DskipTests'} -V -B -ntp -Dmaven.repo.local=$m2repo -e"
+// Check if it is a release
+def isRelease = false
 
-                            if(isUnix()) {
-                                sh mvnCmd
-                                sh 'git add . && git diff --exit-code HEAD'
-                            } else {
-                                bat mvnCmd
+// Bump commands
+def commands = ""
+
+// URR repo
+def urrRepo = 'https://github.com/cloudbees/unified-release.git'
+
+// Just to use the env variable when sending emails
+def id = env.BUILD_NUMBER
+def name = env.JOB_BASE_NAME
+
+// Exclusion list of changes to abort
+def exclusions = ["Jenkinsfile","README.md","NECTARIZE.md","CONTRIBUTING.md"]
+
+// Abort flag based on check of changes against exclusion list
+def abort = true;
+
+properties([buildDiscarder(logRotator(numToKeepStr: '15', artifactNumToKeepStr: '15'))])
+
+k8sNode('private-core-template-maven3.5.4') {
+    try {
+        timestamps {
+            // First stage is actually checking out the source. Since we're using Multibranch
+            // currently, we can use "checkout scm".
+            stage('Checkout') {
+                checkout scm
+            }
+
+            // Now run the actual build.
+            stage('Build / Test') {
+                timeout(time: 360, unit: 'MINUTES') {
+                    try {
+                        environment.withMavenSettings {
+                            def m2repo = "${pwd tmp: true}/m2repo"
+                            // See below for what this method does - we're passing an arbitrary environment
+                            // variable to it so that JAVA_OPTS and MAVEN_OPTS are set correctly.
+                            List mvnEnv = ["JAVA_OPTS=-Xmx1536m -Xms512m", "MAVEN_OPTS=-Xmx1536m -Xms512m"]
+
+                            // Invoke the maven run within the environment we've created
+                            withEnv(mvnEnv) {
+                                if (isPR()) {
+                                    // Check changes against exclusion list
+                                    sh """
+                                        touch changes
+                                        git diff remotes/origin/${env.CHANGE_TARGET} --name-only > changes
+                                        less changes
+                                    """
+                                    def changes = readFile "changes"
+                                    println exclusions
+                                    changes.tokenize().each { change ->
+                                        if (!exclusions.contains(change)) {
+                                            println change
+                                            abort = false
+                                        }
+                                    }
+
+                                    if (abort) {
+                                        println "Changes does not affect to perform a new release of private core"
+                                        currentBuild.result = 'SUCCESS'
+                                        return
+                                    }
+
+                                    sh """
+                                        rm -rf changes
+                                    """
+                                } else {
+                                    abort = false
+                                }
+
+                                // -Dmaven.repo.local=… tells Maven to create a subdir in the temporary directory for the local Maven repository
+                                sh """
+                                    mvn -Pdebug -U clean verify ${runTests ? '-Dmaven.test.failure.ignore' : '-DskipTests'} -V -B -Dmaven.repo.local=$m2repo -s settings.xml -e
+                                    cp -a target/*.pom pom.xml
+                                """
+                                isRelease = ( sh(script: "git log --format=%s -1 | grep --fixed-string '[maven-release-plugin]'", returnStatus: true) == 0 )
+                                def pom = readMavenPom()
+                                jenkinsVersion = pom.version?.replaceAll('-SNAPSHOT', '')
+                                urrBranch += jenkinsVersion.substring(0,5)
+
+                                if (jenkinsVersion.endsWith("-cb-1")) {
+                                    // there is a new core version, so to bump URR is needed
+                                    urrVersion = jenkinsVersion.split("-cb-1")[0]
+                                    if (urrVersion.length() == 8) { // Fixed line
+                                        urrVersion = urrVersion + ".0.1-SNAPSHOT"
+                                    } else {
+                                        urrVersion = urrVersion + ".1-SNAPSHOT"
+                                    }
+                                    commands = 'mvn versions:set-property -Dproperty=jenkins.version -DnewVersion=' + jenkinsVersion + ' && mvn versions:set -DnewVersion=' + urrVersion + ' && mvn envelope:validate -Denvelope.checkDetached=false'
+                                    println "URR VERSION: " + urrVersion
+                                } else {
+                                    commands = 'mvn versions:set-property -Dproperty=jenkins.version -DnewVersion=' + jenkinsVersion + ' && mvn envelope:validate -Denvelope.checkDetached=false'
+                                }
+
+                                println "JENKINS VERSION: " + jenkinsVersion
+                                println "URR BRANCH: " + urrBranch
+                                println "COMMANDS: " + commands
+                                println "RELEASE: " + isRelease
                             }
                         }
-                    }
-                }
-
-                // Once we've built, archive the artifacts and the test results.
-                stage("${buildType} Publishing") {
-                    if (runTests) {
-                        junit healthScaleFactor: 20.0, testResults: '*/target/surefire-reports/*.xml'
-                        archiveArtifacts allowEmptyArchive: true, artifacts: '**/target/surefire-reports/*.dumpstream'
-                    }
-                    if (buildType == 'Linux' && jdk == jdks[0]) {
-                        def changelist = readFile(changelistF)
-                        dir(m2repo) {
-                            archiveArtifacts artifacts: "**/*$changelist/*$changelist*",
-                                             excludes: '**/*.lastUpdated,**/jenkins-test*/',
-                                             allowEmptyArchive: true, // in case we forgot to reincrementalify
-                                             fingerprint: true
+                    } finally {
+                        if (runTests && !abort) {
+                            junit healthScaleFactor: 20.0, testResults: '**/target/surefire-reports/*.xml'
                         }
                     }
                 }
-        }
-    }
-}}
+            }
 
-// TODO: Restore ATH once https://groups.google.com/forum/#!topic/jenkinsci-dev/v9d-XosOp2s is resolved
-// TODO: ATH flow now supports Java 8 only, it needs to be reworked (INFRA-1690)
-builds.ath = {
-    node("docker&&highmem") {
-        // Just to be safe
-        deleteDir()
-        def fileUri
-        def metadataPath
-        dir("sources") {
-            checkout scm
-            withMavenEnv(["JAVA_OPTS=-Xmx1536m -Xms512m",
-                          "MAVEN_OPTS=-Xmx1536m -Xms512m"], 8) {
-                sh "mvn --batch-mode --show-version -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -DskipTests -am -pl war package -Dmaven.repo.local=${pwd tmp: true}/m2repo"
+            if(!isRelease && !isPR() && isCB()) {
+
+                // Check last changes against exclusion list
+                abort = true
+                sh """
+                    touch changes
+                    git diff HEAD^ HEAD --name-only > changes
+                    less changes
+                """
+                def changes = readFile "changes"
+                println exclusions
+                changes.tokenize().each { change ->
+                    if (!exclusions.contains(change)) {
+                        println change
+                        abort = false
+                    }
+                }
+                if (abort) {
+                    println "Changes does not affect to perform a new release of private core"
+                    currentBuild.result = 'SUCCESS'
+                    return
+                }
+
+                sh """
+                    rm -rf changes
+                """
+
+                // Release a new private core signed war
+                stage('Release') {
+                   cbpjcReleaseSign {
+                        branchName = branch
+                        skipApproval = true
+                   }
+                }
+
+                // Generate a new PR against URR with bumped version
+                stage('Bump version on URR') {
+                   pullRequest(
+                        branchName: urrBranchName,
+                        destinationBranchName: urrBranch,
+                        url: urrRepo,
+                        commands: commands,
+                        message: 'Autogenerated bump CB core version ' + branch,
+                        token: token
+                    )
+                }
             }
-            dir("war/target") {
-                fileUri = "file://" + pwd() + "/jenkins.war"
-            }
-            metadataPath = pwd() + "/essentials.yml"
         }
-        dir("ath") {
-            runATH jenkins: fileUri, metadataFile: metadataPath
+    } finally {
+        if (currentBuild.result == 'UNSTABLE') {
+            email(id,name)
         }
     }
 }
 
-builds.failFast = failFast
-parallel builds
-infra.maybePublishIncrementals()
-
-// This method sets up the Maven and JDK tools, puts them in the environment along
-// with whatever other arbitrary environment variables we passed in, and runs the
-// body we passed in within that environment.
-void withMavenEnv(List envVars = [], def buildType, def javaVersion, def body) {
-    if (buildType == 'Linux') {
-        // I.e., a Maven container using ACI. No need to install tools.
-        return withEnv(envVars) {
-            body.call()
+def getToken(credentialId) {
+    def credentials = com.cloudbees.plugins.credentials.CredentialsProvider.lookupCredentials(
+        com.cloudbees.plugins.credentials.common.StandardUsernameCredentials.class,
+        Jenkins.instance,
+        null,
+        null
+    );
+    for (c in credentials) {
+        if (c.id == credentialId) {
+            return c.password
         }
     }
-    
-    // The names here are currently hardcoded for my test environment. This needs
-    // to be made more flexible.
-    // Using the "tool" Workflow call automatically installs those tools on the
-    // node.
-    String mvntool = tool name: "mvn", type: 'hudson.tasks.Maven$MavenInstallation'
-    String jdktool = tool name: "jdk${javaVersion}", type: 'hudson.model.JDK'
+    return null
+}
 
-    // Set JAVA_HOME, MAVEN_HOME and special PATH variables for the tools we're
-    // using.
-    List mvnEnv = ["PATH+MVN=${mvntool}/bin", "PATH+JDK=${jdktool}/bin", "JAVA_HOME=${jdktool}", "MAVEN_HOME=${mvntool}"]
+boolean isPR() {
+    return (env.BRANCH_NAME.startsWith('PR-') && env.CHANGE_TARGET != null)
+}
 
-    // Add any additional environment variables.
-    mvnEnv.addAll(envVars)
+boolean isCB() {
+    return (env.BRANCH_NAME.startsWith('cb-') && !env.BRANCH_NAME.equals('cb-master'))
+}
 
-    // Invoke the body closure we're passed within the environment we've created.
-    withEnv(mvnEnv) {
-        body.call()
+def email(id, name) {
+    emailNotification {
+        recipient          = 'productivity-team@cloudbees.com'
+        subject            = "Private Jenkins builder failed - ${name} #${id}"
+        template           = 'reporting-job'
+        placeholders       = [
+            description: "Please have a look at the following job:"
+        ]
     }
 }
