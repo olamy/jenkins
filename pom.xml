@@ -72,7 +72,7 @@ THE SOFTWARE.
       <id>cloudbees-internal-staging</id>
       <name>CloudBees Internal Release Repository</name>
       <url>${cloudbeesInternalDistMgmtReleasesUrl}</url>
-    </repository> 
+    </repository>
   </distributionManagement>
 
   <issueManagement>
