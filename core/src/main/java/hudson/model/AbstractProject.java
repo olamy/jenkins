@@ -1535,7 +1535,6 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
         }
     }
 
-    @SuppressWarnings("unchecked")
     @Override public Map<TriggerDescriptor,Trigger<?>> getTriggers() {
         return triggers().toMap();
     }
@@ -1937,13 +1936,9 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
 
         public AutoCompletionCandidates doAutoCompleteUpstreamProjects(@QueryParameter String value) {
             AutoCompletionCandidates candidates = new AutoCompletionCandidates();
-            List<Job> jobs = Jenkins.get().getItems(Job.class);
-            for (Job job: jobs) {
-                if (job.getFullName().startsWith(value)) {
-                    if (job.hasPermission(Item.READ)) {
-                        candidates.add(job.getFullName());
-                    }
-                }
+            List<TopLevelItem> jobs = Jenkins.get().getItems(j -> j instanceof Job && j.getFullName().startsWith(value));
+            for (TopLevelItem job: jobs) {
+                candidates.add(job.getFullName());
             }
             return candidates;
         }
@@ -2080,7 +2075,7 @@ public abstract class AbstractProject<P extends AbstractProject<P,R>,R extends A
          * @param label The label that the job wants to restrict itself to.
          * @return The validation result.
          *
-         * @since TODO
+         * @since 2.243
          */
         @NonNull
         public FormValidation checkItem(@NonNull Item item, @NonNull Label label) {

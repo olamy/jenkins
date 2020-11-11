@@ -200,7 +200,6 @@ public abstract class Slave extends Node implements Serializable {
         getAssignedLabels();    // compute labels now
 
         this.nodeProperties.replaceBy(nodeProperties);
-         Slave node = (Slave) Jenkins.get().getNode(name);
 
         if (name.equals(""))
             throw new FormException(Messages.Slave_InvalidConfig_NoName(), null);
@@ -622,7 +621,6 @@ public abstract class Slave extends Node implements Serializable {
          * @since 2.12
          */
         @NonNull
-        @SuppressWarnings("unchecked") // used by Jelly EL only
         @Restricted(NoExternalUse.class) // used by Jelly EL only
         public final List<Descriptor<RetentionStrategy<?>>> retentionStrategyDescriptors(@CheckForNull Slave it) {
             return it == null ? DescriptorVisibilityFilter.applyType(clazz, RetentionStrategy.all())
