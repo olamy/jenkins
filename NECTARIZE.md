@@ -9,49 +9,31 @@ is whenever we need to nectarize, we do so by merging this branch into it.
 When the community is done with its LTS releases on a `stable-1.xxx` branch and CloudBees is
 ready to take over, or private builds are used the the current LTS line, we do the following:
 
-* First thing is update `nectarize` branch with the changes on the previous LTS merging the `cb.X.Y` into
-  `nectarize` branch: `git merge cb-X.Y`
+* Add as remote the OSS reporsitory `git remote add oss https://github.com/jenkinsci/jenkins.git` and `git fetch oss`. Your remote `origin` is supossed to be `https://github.com/cloudbees-oss/private-jenkins.git`
 
-* Determine the correct 3rd digit for the nectarized version, such as `x.yyy.18`.
-  This 3rd digit is kept the same across all the sustaining LTS branches that are
-  actively maintained, so the easiest way is to find this is to check out the previous
-  nectarized LTS line from the cloudbees repo and look at its version number.
-  We will refer to this number in `1.xxx.yy` as `yy`. If we are nectarizing the current LTS line,
-  the version number is the same than the community one but `-cb-x` is added at the end, with `x`
-  starting at 1.
+* First thing is update `nectarize` branch with the changes on the __previous LTS__ merging the `cb.X.Y` into
+  `nectarize` branch: `git fetch origin; git branch -D nectarize; git checkout -t origin/nectarize; git merge --no-ff origin/cb-X.Y` and push your changes.
 
-* Created a `cb-x.yyy` branch from the `community-x.yyy` repo (which should be in sync with the community repo).
-  ### Until version 2.190 LTS
-  * Run `mvn release:update-versions -DdevelopmentVersion=x.yyy.zz-cb-w-SNAPSHOT` on
-  the workspace from the previous step. If unsure, see commit d08cf489bce4ab8f109c59b1ce3aaec7a87d3298
-  for an actual example of how this was done. This step reduces the merge conflict in the next step.
-  * Only if incremental is enabled (from 2.138 LTS onwards), then run also `mvn -V -B   io.jenkins.tools.incrementals:incrementals-maven-plugin:reincrementalify`. Further details: https://github.com/jenkinsci/incrementals-tools#running-maven-releases
-  ### From version 2.191 LTS
-  * Run `mvn versions:set-property -Dproperty=revision -DnewVersion=x.yyy.zz-cb-w`
-
-* Run `git merge nectarize` to merge the tip of the `nectarize`.
-  If this step results in merge conflicts, *DO NOT RESOLVE merge conflicts here*. Instead,
-  abandon the merge, follow the "Update nectarize branch" process below, then retry this
-  step from scratch.
-
-* Push the resulting `cb-x.yyy` into the `private-jenkins` repo. Congratulations,
-  a new LTS release line is properly nectarized.
-
-## How to update nectarize branch
-The `nectarize` branch contains POM changes that are necessary to internalize LTS release lines,
-and normally it should merge cleanly to any `stable-x.yyy` branches. However, on rare occasions,
-the OSS Jenkins project modifies POMs in ways that cause merge conflicts.
-
-When this happens, it is important to update the `nectarize` branch to reflect this changes,
-instead of resolving merge conflicts at the point of `stable-x.yyy` merges. Otherwise there
-won't be any guarantee that such merge conflicts are resolved consistently.
-
-Say you discovered that you need to update the `nectarize` branch while trying to nectarize
-`stable-x.zzz`. The following process updates `nectarize` branch:
-
-* Checkout the `nectarize` branch from the cloudbees repo
 * `git merge 'jenkins-x.zzz^'` to merge the parent commit of the release tag into this workspace (you will need the community repository tags for this).
+
 * Resolve merge conflicts carefully. If necessary, check the difference between the `nectarize`
-  branch and its previous base.
+  branch and its previous base. Tip using *the previous LTS* `git diff origin/cb-X.Y..origin/community-X.Y --name-only`. If you have changes in files that has conflicts, please take care.
+  
 * Commit the change and push that into the `nectarize` branch
 
+* Create a branch `community-x.yyy` from branch `stable-x.yyy` in OSS. If the branch is not existing yet, use tag `jenkins-x.yyy`. Push `community-x.yyy` branch to `origin` reposotory
+
+* Create a `cb-x.yyy` branch from the `community-x.yyy` repo (which should be in sync with the community repo).
+
+* Run `git merge nectarize` to merge the tip of the `nectarize` over the branch `cb-x.yyy`
+  
+* Run `mvn release:update-versions -DdevelopmentVersion=x.yyy.zz-cb-w-SNAPSHOT` on branch `cb-x.yyy` after `nectarized` branch is merged on it. 
+
+* Run `mvn -V -B io.jenkins.tools.incrementals:incrementals-maven-plugin:reincrementalify` [Only if incremental is enabled (from 2.138 LTS onwards)]
+
+* Commit the changes into `cb-x.yyy` branch
+
+* Push the resulting `cb-x.yyy` into the `private-jenkins` repo.
+
+__Congratulations,
+  a new LTS release line is properly nectarized.__
