@@ -145,6 +145,7 @@ import jenkins.model.Jenkins;
 import jenkins.model.ModelObjectWithChildren;
 import jenkins.model.ModelObjectWithContextMenu;
 
+import jenkins.views.OSSHeaderLayout;
 import org.acegisecurity.AccessDeniedException;
 import org.apache.commons.jelly.JellyContext;
 import org.apache.commons.jelly.JellyTagException;
@@ -2296,5 +2297,11 @@ public class Functions {
         } else {
             return true;
         }
+    }
+
+    // CloudBees proprietary functions
+    @Restricted(NoExternalUse.class)
+    public static OSSHeaderLayout ossHeader() {
+        return ExtensionList.lookupSingleton(OSSHeaderLayout.class);
     }
 }
