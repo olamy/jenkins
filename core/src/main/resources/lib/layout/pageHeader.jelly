@@ -1,4 +1,11 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:i="jelly:fmt" xmlns:x="jelly:xml">
-    <st:include it="${h.ossHeader()}" page="pageHeaderOSS.jelly"/>
+    <j:choose>
+        <j:when test="${h.honeyUIHeader() != null}">
+            <st:include it="${h.honeyUIHeader()}" page="pageHeader.jelly"/>
+        </j:when>
+        <j:otherwise>
+            <st:include it="${h.ossHeader()}" page="pageHeader.jelly"/>
+        </j:otherwise>
+    </j:choose>
 </j:jelly>

@@ -145,6 +145,7 @@ import jenkins.model.Jenkins;
 import jenkins.model.ModelObjectWithChildren;
 import jenkins.model.ModelObjectWithContextMenu;
 
+import jenkins.views.AbstractCBHeader;
 import jenkins.views.OSSHeaderLayout;
 import org.acegisecurity.AccessDeniedException;
 import org.apache.commons.jelly.JellyContext;
@@ -2303,5 +2304,20 @@ public class Functions {
     @Restricted(NoExternalUse.class)
     public static OSSHeaderLayout ossHeader() {
         return ExtensionList.lookupSingleton(OSSHeaderLayout.class);
+    }
+
+    @Restricted(NoExternalUse.class)
+    @CheckForNull
+    public static AbstractCBHeader honeyUIHeader() {
+        ExtensionList<AbstractCBHeader> all = ExtensionList.lookup(AbstractCBHeader.class);
+
+        if (all.size() > 0) {
+            if (all.size() > 1) {
+                LOGGER.warning("More than one configured header. This should not happen. Serving the first one and please review");
+            }
+            return all.get(0);
+        }
+
+        return null;
     }
 }
