@@ -2301,6 +2301,7 @@ public class Functions {
     }
 
     // CloudBees proprietary functions
+    // TODO remove once the new plugins land in CAP
     @Restricted(NoExternalUse.class)
     public static OSSHeaderLayout ossHeader() {
         return ExtensionList.lookupSingleton(OSSHeaderLayout.class);
