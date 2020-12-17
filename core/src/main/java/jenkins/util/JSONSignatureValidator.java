@@ -104,7 +104,7 @@ public class JSONSignatureValidator {
                     case ERROR:
                         return resultSha512;
                     case WARNING:
-                        LOGGER.log(Level.INFO, "JSON data source '" + name + "' does not provide a SHA-512 content checksum or signature. Looking for SHA-1.");
+                        LOGGER.log(Level.FINEST, "JSON data source '" + name + "' does not provide a SHA-512 content checksum or signature. Looking for SHA-1.");
                         break;
                     case OK:
                         // fall through
