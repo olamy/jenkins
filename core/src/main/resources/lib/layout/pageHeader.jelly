@@ -5,7 +5,7 @@
             <st:include it="${h.honeyUIHeader()}" page="pageHeader.jelly"/>
         </j:when>
         <j:otherwise>
-            <st:include it="${h.ossHeader()}" page="pageHeader.jelly"/>
+            <st:include it="${h.ossHeader()}" page="ossPageHeader.jelly"/>
         </j:otherwise>
     </j:choose>
 </j:jelly>
