@@ -46,6 +46,7 @@ import org.kohsuke.stapler.StaplerResponse;
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
 import org.kohsuke.stapler.interceptor.RequirePOST;
+import jenkins.security.stapler.StaplerNotDispatchable;
 
 import net.jcip.annotations.GuardedBy;
 import javax.servlet.ServletException;
@@ -510,6 +511,7 @@ public class Executor extends Thread implements ModelObject {
      * @return
      *      null if the executor is idle.
      */
+    @StaplerNotDispatchable
     public @CheckForNull Queue.Executable getCurrentExecutable() {
         lock.readLock().lock();
         try {
@@ -523,6 +525,7 @@ public class Executor extends Thread implements ModelObject {
      * Same as {@link #getCurrentExecutable} but checks {@link Item#READ}.
      */
     @Exported(name="currentExecutable")
+    @StaplerNotDispatchable
     @Restricted(DoNotUse.class) // for exporting only
     public Queue.Executable getCurrentExecutableForApi() {
         Executable candidate = getCurrentExecutable();
