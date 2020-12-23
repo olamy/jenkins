@@ -49,7 +49,7 @@ def abort = true;
 
 properties([buildDiscarder(logRotator(numToKeepStr: '15', artifactNumToKeepStr: '15'))])
 
-k8sNode('private-core-template-maven3.5.4') {
+k8sNode('private-core-template-maven3.5.4-non-root') {
     try {
         timestamps {
             // First stage is actually checking out the source. Since we're using Multibranch
