@@ -145,7 +145,7 @@ import jenkins.model.Jenkins;
 import jenkins.model.ModelObjectWithChildren;
 import jenkins.model.ModelObjectWithContextMenu;
 
-import jenkins.views.AbstractCBHeader;
+import jenkins.views.CbHeader;
 import jenkins.views.OSSHeaderLayout;
 import org.acegisecurity.AccessDeniedException;
 import org.apache.commons.jelly.JellyContext;
@@ -2309,8 +2309,12 @@ public class Functions {
 
     @Restricted(NoExternalUse.class)
     @CheckForNull
-    public static AbstractCBHeader honeyUIHeader() {
-        ExtensionList<AbstractCBHeader> all = ExtensionList.lookup(AbstractCBHeader.class);
+    public static CbHeader honeyUIHeader() {
+        if (CbHeader.CB_HEADER_DISABLED) {
+            return null;
+        }
+
+        ExtensionList<CbHeader> all = ExtensionList.lookup(CbHeader.class);
 
         if (all.size() > 0) {
             if (all.size() > 1) {
