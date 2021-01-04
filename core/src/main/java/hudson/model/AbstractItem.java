@@ -53,7 +53,6 @@ import jenkins.model.DirectlyModifiableTopLevelItemGroup;
 import jenkins.model.Jenkins;
 import jenkins.model.queue.ItemDeletion;
 import jenkins.security.NotReallyRoleSensitiveCallable;
-import jenkins.util.SystemProperties;
 import jenkins.util.xml.XMLUtils;
 
 import org.apache.tools.ant.taskdefs.Copy;
@@ -951,10 +950,6 @@ public abstract class AbstractItem extends Actionable implements Item, HttpDelet
             }
             getACL().checkPermission(Item.READ);
         }
-        if (!SKIP_ANCESTOR_CHECK && Stapler.getCurrentRequest().findAncestor(getParent()) == null) {
-            // Require that request routing goes through model ancestors
-            return null;
-        }
         return this;
     }
 
@@ -963,8 +958,6 @@ public abstract class AbstractItem extends Actionable implements Item, HttpDelet
      */
     @Restricted(NoExternalUse.class)
     public static /* Script Console modifiable */ boolean SKIP_PERMISSION_CHECK = Boolean.getBoolean(AbstractItem.class.getName() + ".skipPermissionCheck");
-
-    private static /* Script Console modifiable */ boolean SKIP_ANCESTOR_CHECK = SystemProperties.getBoolean(AbstractItem.class.getName() + ".skipAncestorCheck");
 
     /**
      * Used for CLI binding.

@@ -35,9 +35,7 @@ import hudson.model.Descriptor;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.PeriodicWork;
-import hudson.model.Queue;
 import hudson.model.Result;
-import hudson.model.RootAction;
 import hudson.model.TaskListener;
 import hudson.model.queue.QueueTaskFuture;
 import hudson.security.FullControlOnceLoggedInAuthorizationStrategy;
@@ -54,7 +52,6 @@ import org.jvnet.hudson.test.MockAuthorizationStrategy;
 import org.jvnet.hudson.test.TestExtension;
 import org.kohsuke.stapler.WebApp;
 
-import javax.annotation.CheckForNull;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -373,32 +370,6 @@ public class Security400Test {
         }
     }
 
-    @TestExtension
-    public static class FirstExecutable implements RootAction {
-
-        @CheckForNull
-        @Override
-        public String getIconFileName() {
-            return null;
-        }
-
-        @CheckForNull
-        @Override
-        public String getDisplayName() {
-            return null;
-        }
-
-        @CheckForNull
-        @Override
-        public String getUrlName() {
-            return "executable";
-        }
-
-        public Queue.Executable getFirst() {
-            return Jenkins.get().getComputers()[0].getExecutors().get(0).getCurrentExecutable();
-        }
-    }
-
     @Test
     @Issue("SECURITY-404")
     public void anonCannotReadTextConsole() throws Exception {
@@ -420,7 +391,7 @@ public class Security400Test {
         j.jenkins.setNumExecutors(1);
         
         { // preliminary test, calling the consoleText method without any executor results in 404
-            Page page = wc.goTo("executable/first/consoleText", null);
+            Page page = wc.goTo("computers/0/executors/0/currentExecutable/consoleText", null);
             checkPageIsRedirectedToLogin(page);
             assertRequestWasNotBlocked();
         }
@@ -431,7 +402,7 @@ public class Security400Test {
             QueueTaskFuture<FreeStyleBuild> futureBuild = p.scheduleBuild2(0);
             futureBuild.waitForStart();
             
-            Page page = wc.goTo("executable/first/consoleText", null);
+            Page page = wc.goTo("computers/0/executors/0/currentExecutable/consoleText", null);
             assertEquals(200, page.getWebResponse().getStatusCode());
             assertThat(page.getWebResponse().getContentAsString(), containsString(SemaphoredBuilder.START_MESSAGE));
             assertRequestWasNotBlocked();
@@ -447,7 +418,7 @@ public class Security400Test {
             QueueTaskFuture<FreeStyleBuild> futureBuild = p.scheduleBuild2(0);
             futureBuild.waitForStart();
             
-            Page page = wc.goTo("executable/first/consoleText", null);
+            Page page = wc.goTo("computers/0/executors/0/currentExecutable/consoleText", null);
             checkPageIsRedirectedToLogin(page);
             assertThat(page.getWebResponse().getContentAsString(), not(containsString(SemaphoredBuilder.START_MESSAGE)));
             assertRequestWasNotBlocked();

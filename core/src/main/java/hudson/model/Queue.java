@@ -71,7 +71,6 @@ import java.nio.file.Files;
 import hudson.util.Futures;
 import jenkins.security.QueueItemAuthenticatorProvider;
 import jenkins.security.stapler.StaplerAccessibleType;
-import jenkins.security.stapler.StaplerNotDispatchable;
 import jenkins.util.SystemProperties;
 import jenkins.util.Timer;
 import hudson.triggers.SafeTimerTask;
@@ -2114,7 +2113,6 @@ public class Queue extends ResourceController implements Saveable {
          * Project to be built.
          */
         @Exported
-        @StaplerNotDispatchable
         public final Task task;
 
         private /*almost final*/ transient FutureImpl future;
