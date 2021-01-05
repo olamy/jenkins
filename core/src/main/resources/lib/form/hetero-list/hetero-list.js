@@ -27,7 +27,10 @@ Behaviour.specify("DIV.hetero-list-container", 'hetero-list', -100, function(e) 
             var tooltip = n.getAttribute("tooltip");
             var descriptorId = n.getAttribute("descriptorId");
             // YUI Menu interprets this <option> text node as HTML, so let's escape it again!
-            var title = n.getAttribute("title").escapeHTML();
+            var title = n.getAttribute("title");
+            if (title) {
+                title = title.escapeHTML();
+            }
             menu.options[i] = new Option(title,""+i);
             templates.push({html:n.innerHTML, name:name, tooltip:tooltip,descriptorId:descriptorId});
             i++;
