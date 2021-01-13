@@ -89,7 +89,7 @@ public class Digester2 extends Digester {
     }
 
     /**
-     * @param parser the parser
+     * @param reader the reader
      * @param processSecurely true iff this should configure the parser to prevent XXE.
      * @since TODO
      */
