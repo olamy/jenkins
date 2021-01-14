@@ -2301,7 +2301,7 @@ public class Functions {
     }
 
     // CloudBees proprietary functions
-    // TODO remove once the new plugins land in CAP
+    // TODO remove if we decide to rid of the former header completely
     @Restricted(NoExternalUse.class)
     public static OSSHeaderLayout ossHeader() {
         return ExtensionList.lookupSingleton(OSSHeaderLayout.class);
@@ -2310,11 +2310,7 @@ public class Functions {
     @Restricted(NoExternalUse.class)
     @CheckForNull
     public static CbHeader honeyUIHeader() {
-        if (CbHeader.CB_HEADER_DISABLED) {
-            return null;
-        }
-
-        ExtensionList<CbHeader> all = ExtensionList.lookup(CbHeader.class);
+        List<CbHeader> all = ExtensionList.lookup(CbHeader.class).stream().filter(cbHeader -> cbHeader.isCbHeaderEnabled()).collect(Collectors.toList());
 
         if (all.size() > 0) {
             if (all.size() > 1) {

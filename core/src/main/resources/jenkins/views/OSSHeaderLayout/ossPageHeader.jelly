@@ -1,4 +1,4 @@
-<!-- TODO remove once the new plugins land in CAP -->
+<!-- This jelly file will remain while we accept users to disable the new header -->
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:i="jelly:fmt" xmlns:x="jelly:xml">
     <st:documentation>
@@ -87,12 +87,12 @@
                                        class="am-monitor-icon" >
                                 <use href="${resURL}/images/material-icons/svg-sprite-social-symbol.svg#ic_person_24px"></use>
                             </l:svgIcon>
-                            <span class="hidden-xs hidden-sm">${userName}</span>
+                            <span data-testid="user-logged-in" class="hidden-xs hidden-sm">${userName}</span>
                         </a>
                         <j:if test="${app.securityRealm.canLogOut()}">
                             <a href="${rootURL}/logout">
                                 <l:svgIcon href="${resURL}/images/material-icons/svg-sprite-action-symbol.svg#ic_input_24px" />
-                                <span class="hidden-xs hidden-sm">${logout}</span>
+                                <span data-testid="logout" class="hidden-xs hidden-sm">${logout}</span>
                             </a>
                         </j:if>
                     </j:when>
