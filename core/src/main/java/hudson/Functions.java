@@ -145,6 +145,8 @@ import jenkins.model.Jenkins;
 import jenkins.model.ModelObjectWithChildren;
 import jenkins.model.ModelObjectWithContextMenu;
 
+import jenkins.views.CbHeader;
+import jenkins.views.OSSHeaderLayout;
 import org.acegisecurity.AccessDeniedException;
 import org.apache.commons.jelly.JellyContext;
 import org.apache.commons.jelly.JellyTagException;
@@ -2296,5 +2298,27 @@ public class Functions {
         } else {
             return true;
         }
+    }
+
+    // CloudBees proprietary functions
+    // TODO remove if we decide to rid of the former header completely
+    @Restricted(NoExternalUse.class)
+    public static OSSHeaderLayout ossHeader() {
+        return ExtensionList.lookupSingleton(OSSHeaderLayout.class);
+    }
+
+    @Restricted(NoExternalUse.class)
+    @CheckForNull
+    public static CbHeader honeyUIHeader() {
+        List<CbHeader> all = ExtensionList.lookup(CbHeader.class).stream().filter(cbHeader -> cbHeader.isCbHeaderEnabled()).collect(Collectors.toList());
+
+        if (all.size() > 0) {
+            if (all.size() > 1) {
+                LOGGER.warning("More than one configured header. This should not happen. Serving the first one and please review");
+            }
+            return all.get(0);
+        }
+
+        return null;
     }
 }
