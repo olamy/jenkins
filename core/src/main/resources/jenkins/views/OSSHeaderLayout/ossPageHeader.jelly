@@ -68,7 +68,8 @@
 
         <div class="login page-header__hyperlinks">
             <div id="visible-am-insertion" class="page-header__am-wrapper" />
-
+            <div id="visible-sec-am-insertion" class="page-header__am-wrapper" />
+            
             <!-- login field -->
             <j:if test="${app.useSecurity}">
                 <j:choose>
