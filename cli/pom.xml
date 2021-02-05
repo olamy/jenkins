@@ -5,7 +5,7 @@
   <parent>
     <groupId>org.jenkins-ci.main</groupId>
     <artifactId>jenkins-parent</artifactId>
-    <version>2.263</version>
+    <version>${revision}${changelist}</version>
   </parent>
 
   <artifactId>cli</artifactId>
@@ -16,7 +16,6 @@
   <properties>
     <!-- TODO: remove once Medium level is set in the core (JENKINS-36716) -->
     <findbugs.threshold>Medium</findbugs.threshold>
-    <junit.jupiter.version>5.5.2</junit.jupiter.version>
   </properties>
 
   <dependencyManagement>
