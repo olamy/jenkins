@@ -68,7 +68,6 @@ import jenkins.model.Jenkins;
 import jenkins.util.io.OnMaster;
 import net.sf.json.JSONObject;
 
-import org.acegisecurity.Authentication;
 import org.apache.commons.io.input.CountingInputStream;
 import org.apache.commons.io.output.NullOutputStream;
 import org.jenkinsci.Symbol;
@@ -126,6 +125,7 @@ import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
 import org.kohsuke.stapler.interceptor.RequirePOST;
+import org.springframework.security.core.Authentication;
 
 
 /**
@@ -703,7 +703,7 @@ public class UpdateCenter extends AbstractModelObject implements Saveable, OnMas
     @RequirePOST
     public void doUpgrade(StaplerResponse rsp) throws IOException, ServletException {
         Jenkins.get().checkPermission(Jenkins.ADMINISTER);
-        HudsonUpgradeJob job = new HudsonUpgradeJob(getCoreSource(), Jenkins.getAuthentication());
+        HudsonUpgradeJob job = new HudsonUpgradeJob(getCoreSource(), Jenkins.getAuthentication2());
         if(!Lifecycle.get().canRewriteHudsonWar()) {
             sendError("Jenkins upgrade not supported in this running mode");
             return;
@@ -814,7 +814,7 @@ public class UpdateCenter extends AbstractModelObject implements Saveable, OnMas
             return;
         }
 
-        HudsonDowngradeJob job = new HudsonDowngradeJob(getCoreSource(), Jenkins.getAuthentication());
+        HudsonDowngradeJob job = new HudsonDowngradeJob(getCoreSource(), Jenkins.getAuthentication2());
         LOGGER.info("Scheduling the core downgrade");
         addJob(job);
         rsp.sendRedirect2(".");
@@ -826,7 +826,7 @@ public class UpdateCenter extends AbstractModelObject implements Saveable, OnMas
     @RequirePOST
     public void doRestart(StaplerResponse rsp) throws IOException, ServletException {
         Jenkins.get().checkPermission(Jenkins.ADMINISTER);
-        HudsonDowngradeJob job = new HudsonDowngradeJob(getCoreSource(), Jenkins.getAuthentication());
+        HudsonDowngradeJob job = new HudsonDowngradeJob(getCoreSource(), Jenkins.getAuthentication2());
         LOGGER.info("Scheduling the core downgrade");
 
         addJob(job);
@@ -1535,7 +1535,7 @@ public class UpdateCenter extends AbstractModelObject implements Saveable, OnMas
 
         public RestartJenkinsJob(UpdateSite site) {
             super(site);
-            this.authentication = Jenkins.getAuthentication().getName();
+            this.authentication = Jenkins.getAuthentication2().getName();
         }
 
         public synchronized void run() {
@@ -2156,7 +2156,7 @@ public class UpdateCenter extends AbstractModelObject implements Saveable, OnMas
                 // if this is a bundled plugin, make sure it won't get overwritten
                 PluginWrapper pw = plugin.getInstalled();
                 if (pw!=null && pw.isBundled()) {
-                    try (ACLContext ctx = ACL.as(ACL.SYSTEM)) {
+                    try (ACLContext ctx = ACL.as2(ACL.SYSTEM2)) {
                         pw.doPin();
                     }
                 }

@@ -36,8 +36,6 @@ import jenkins.model.CauseOfInterruption;
 import jenkins.model.CauseOfInterruption.UserInterruption;
 import jenkins.model.InterruptedBuildAction;
 import jenkins.model.Jenkins;
-import org.acegisecurity.AccessDeniedException;
-import org.acegisecurity.Authentication;
 import org.kohsuke.stapler.HttpResponse;
 import org.kohsuke.stapler.HttpResponses;
 import org.kohsuke.stapler.QueryParameter;
@@ -76,6 +74,8 @@ import jenkins.security.QueueItemAuthenticatorDescriptor;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
 
 
 /**
@@ -196,8 +196,8 @@ public class Executor extends Thread implements ModelObject {
     }
 
     private void interrupt(Result result, boolean forShutdown) {
-        Authentication a = Jenkins.getAuthentication();
-        if (a == ACL.SYSTEM)
+        Authentication a = Jenkins.getAuthentication2();
+        if (a.equals(ACL.SYSTEM2))
             interrupt(result, forShutdown, new CauseOfInterruption[0]);
         else {
             // worth recording who did it
@@ -245,7 +245,7 @@ public class Executor extends Thread implements ModelObject {
         // this method is almost always called as a result of the current thread being interrupted
         // as a result we need to clean the interrupt flag so that the lock's lock method doesn't
         // get confused and think it was interrupted while awaiting the lock
-        Thread.interrupted(); 
+        Thread.interrupted();
         // we need to use a write lock as we may be repeatedly interrupted while processing and
         // we need the same lock as used in void interrupt(Result,boolean,CauseOfInterruption...)
         // JENKINS-28690
@@ -340,7 +340,7 @@ public class Executor extends Thread implements ModelObject {
             lock.writeLock().unlock();
         }
 
-        try (ACLContext ctx = ACL.as(ACL.SYSTEM)) {
+        try (ACLContext ctx = ACL.as2(ACL.SYSTEM2)) {
             SubTask task;
             // transition from idle to building.
             // perform this state change as an atomic operation wrt other queue operations
@@ -414,9 +414,9 @@ public class Executor extends Thread implements ModelObject {
                 }
 
                 setName(getName() + " : executing " + executable.toString());
-                Authentication auth = workUnit.context.item.authenticate();
+                Authentication auth = workUnit.context.item.authenticate2();
                 LOGGER.log(FINE, "{0} is now executing {1} as {2}", new Object[] {getName(), executable, auth});
-                if (LOGGER.isLoggable(FINE) && auth.equals(ACL.SYSTEM)) { // i.e., unspecified
+                if (LOGGER.isLoggable(FINE) && auth.equals(ACL.SYSTEM2)) { // i.e., unspecified
                     if (QueueItemAuthenticatorDescriptor.all().isEmpty()) {
                         LOGGER.fine("no QueueItemAuthenticator implementations installed");
                     } else if (QueueItemAuthenticatorConfiguration.get().getAuthenticators().isEmpty()) {
@@ -425,7 +425,7 @@ public class Executor extends Thread implements ModelObject {
                         LOGGER.log(FINE, "some QueueItemAuthenticator implementations configured but neglected to authenticate {0}", executable);
                     }
                 }
-                try (ACLContext context = ACL.as(auth)) {
+                try (ACLContext context = ACL.as2(auth)) {
                     queue.execute(executable, task);
                 }
             } catch (AsynchronousExecution x) {
@@ -528,12 +528,12 @@ public class Executor extends Thread implements ModelObject {
         Executable candidate = getCurrentExecutable();
         return candidate instanceof AccessControlled && ((AccessControlled) candidate).hasPermission(Item.READ) ? candidate : null;
     }
-    
+
     /**
      * Returns causes of interruption.
      *
      * @return Unmodifiable collection of causes of interruption.
-     * @since  1.617    
+     * @since  1.617
      */
     public @NonNull Collection<CauseOfInterruption> getCausesOfInterruption() {
         return Collections.unmodifiableCollection(causes);

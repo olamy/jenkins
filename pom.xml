@@ -28,7 +28,7 @@ THE SOFTWARE.
   <parent>
     <groupId>org.jenkins-ci</groupId>
     <artifactId>jenkins</artifactId>
-    <version>1.58</version>
+    <version>1.62</version>
     <relativePath />
   </parent>
 
@@ -81,7 +81,7 @@ THE SOFTWARE.
   </issueManagement>
 
   <properties>
-    <revision>2.263.4-cb-3</revision>
+    <revision>2.277.1-cb-1</revision>
     <changelist>-SNAPSHOT</changelist>
 
     <!-- *.html files are in UTF-8, and *.properties are in iso-8859-1, so this configuration is actually incorrect,
@@ -95,8 +95,8 @@ THE SOFTWARE.
     <project.patchManagement.url>https://api.github.com</project.patchManagement.url>
     <patch.tracker.serverId>jenkins-jira</patch.tracker.serverId>
 
-    <matrix-auth.version>2.6.2</matrix-auth.version>
-    <matrix-project.version>1.17</matrix-project.version>
+    <matrix-auth.version>2.6.5</matrix-auth.version>
+    <matrix-project.version>1.18</matrix-project.version>
     <sorcerer.version>0.11</sorcerer.version>
     <animal.sniffer.skip>${skipTests}</animal.sniffer.skip>
     <java.level>8</java.level>
@@ -106,7 +106,7 @@ THE SOFTWARE.
     <changelog.url>https://release-notes.cloudbees.com/product/Jenkins+OSS+LTS</changelog.url>
 
     <!-- Bundled Remoting version -->
-    <remoting.version>4.5</remoting.version>
+    <remoting.version>4.6</remoting.version>
     <!-- Minimum Remoting version, which is tested for API compatibility -->
     <remoting.minimum.supported.version>3.14</remoting.minimum.supported.version>
 
@@ -119,6 +119,7 @@ THE SOFTWARE.
     <access-modifier-annotation.version>1.16</access-modifier-annotation.version>
     <access-modifier-checker.version>1.16</access-modifier-checker.version>
     <junit.jupiter.version>5.7.0</junit.jupiter.version>
+    <powermock.version>2.0.9</powermock.version>
   </properties>
 
   <dependencyManagement>
@@ -128,23 +129,23 @@ THE SOFTWARE.
       <dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-core</artifactId>
-        <version>3.0.0</version>
+        <version>3.7.0</version>
       </dependency>
 
       <dependency>
         <groupId>org.powermock</groupId>
         <artifactId>powermock-module-junit4</artifactId>
-        <version>2.0.0-beta.5</version>
+        <version>${powermock.version}</version>
       </dependency>
       <dependency>
         <groupId>org.powermock</groupId>
         <artifactId>powermock-api-mockito2</artifactId>
-        <version>2.0.0-beta.5</version>
+        <version>${powermock.version}</version>
       </dependency>
       <dependency>
         <groupId>org.objenesis</groupId>
         <artifactId>objenesis</artifactId>
-        <version>2.6</version>
+        <version>3.1</version>
       </dependency>
 
       <dependency>
@@ -154,7 +155,7 @@ THE SOFTWARE.
         <!-- the old artifactID for the servlet API -->
         <artifactId>servlet-api</artifactId>
         <version>[0]</version>
-        <!-- 
+        <!--
               "[0]" is a range that must be exaclty 0
               this is different to "0" which is hint to use version 0.
               therefore unless anyone else uses ranges (they should not) this version will always win
@@ -240,6 +241,7 @@ THE SOFTWARE.
           <artifactId>maven-javadoc-plugin</artifactId>
           <configuration>
             <quiet>true</quiet>
+            <doclint>all,-missing</doclint>
           </configuration>
         </plugin>
         <plugin>
@@ -346,7 +348,7 @@ THE SOFTWARE.
         </plugin>
         <plugin>
           <groupId>org.jvnet.localizer</groupId>
-          <artifactId>maven-localizer-plugin</artifactId>
+          <artifactId>localizer-maven-plugin</artifactId>
           <configuration>
             <outputEncoding>UTF-8</outputEncoding>
           </configuration>
