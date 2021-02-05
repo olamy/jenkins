@@ -48,7 +48,7 @@ import org.springframework.security.core.Authentication;
  * Display an administrative monitor if we expect {@link QueueItemAuthenticator} to be a useful security measure,
  * but either it's not present, or potentially badly configured.
  */
-@Extension
+// @Extension - Disabled for JENSEC-461
 @Restricted(NoExternalUse.class)
 public class QueueItemAuthenticatorMonitor extends AdministrativeMonitor {
     @Override
@@ -106,7 +106,7 @@ public class QueueItemAuthenticatorMonitor extends AdministrativeMonitor {
     }
 
     @Restricted(NoExternalUse.class)
-    @Extension
+    // @Extension - Disabled for JENSEC-461
     public static class QueueListenerImpl extends QueueListener {
         @Override
         public void onLeft(Queue.LeftItem li) {

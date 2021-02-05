@@ -32,7 +32,7 @@ N/A
   * Fill-in the `Proposed changelog entries` section only if there are breaking changes or other changes which may require extra steps from users during the upgrade
 - [ ] Appropriate autotests or explanation to why this change has no tests
 - [ ] For dependency updates: links to external changelogs and, if possible, full diffs
-
+- [ ] PCT and ATH are launched?
 <!-- For new API and extension points: Link to the reference implementation in open-source (or example in Javadoc) -->
 
 ### Desired reviewers
