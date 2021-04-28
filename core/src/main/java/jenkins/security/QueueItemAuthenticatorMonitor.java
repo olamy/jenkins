@@ -23,7 +23,6 @@
  */
 package jenkins.security;
 
-import hudson.Extension;
 import hudson.model.AdministrativeMonitor;
 import hudson.model.Job;
 import hudson.model.Queue;
