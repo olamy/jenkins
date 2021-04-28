@@ -720,7 +720,6 @@ THE SOFTWARE.
           </plugin>
           <!--<plugin>
             <artifactId>maven-gpg-plugin</artifactId>
-            <!-- Version specified in parent POM -->
             <executions>
               <execution>
                 <id>sign-artifacts</id>
