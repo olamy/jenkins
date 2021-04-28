@@ -23,6 +23,7 @@
  */
 package hudson.model;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -72,10 +73,11 @@ public class FileParameterValue extends ParameterValue {
      * It's not recommended to enable for security reasons. That option is only present for backward compatibility.
      */
     @Restricted(NoExternalUse.class)
+    @SuppressFBWarnings("MS_SHOULD_BE_FINAL")
     public static /* Script Console modifiable */ boolean ALLOW_FOLDER_TRAVERSAL_OUTSIDE_WORKSPACE = 
             Boolean.getBoolean(FileParameterValue.class.getName() + ".allowFolderTraversalOutsideWorkspace");
 
-    private transient final FileItem file;
+    private final transient FileItem file;
 
     /**
      * The name of the originally uploaded file.
@@ -170,6 +172,12 @@ public class FileParameterValue extends ParameterValue {
                     }
                     FilePath locationFilePath = ws.child(location);
                     locationFilePath.getParent().mkdirs();
+
+                    // TODO Remove this workaround after FILEUPLOAD-293 is resolved.
+                    if (locationFilePath.exists() && !locationFilePath.isDirectory()) {
+                        locationFilePath.delete();
+                    }
+
             	    locationFilePath.copyFrom(file);
                     locationFilePath.copyTo(new FilePath(getLocationUnderBuild(build)));
             	}

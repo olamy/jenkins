@@ -53,7 +53,7 @@ import jenkins.model.WorkspaceWriter;
 import jenkins.model.Jenkins;
 import antlr.ANTLRException;
 import hudson.triggers.SCMTrigger;
-import hudson.model.Cause.LegacyCodeCause;
+import hudson.model.Cause.UserIdCause;
 import com.gargoylesoftware.htmlunit.html.HtmlElement;
 import com.gargoylesoftware.htmlunit.html.HtmlForm;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
@@ -234,7 +234,7 @@ public class ProjectTest {
         j.jenkins.setQuietPeriod(0);
         assertEquals("Quiet period is not set so it should be the same as global quiet period.", 0, p.getQuietPeriod());
         p.setQuietPeriod(10);
-        assertEquals("Quiet period was set.",p.getQuietPeriod(),10);
+        assertEquals("Quiet period was set.", 10, p.getQuietPeriod());
     }
     
     @Test
@@ -303,7 +303,7 @@ public class ProjectTest {
     public void testScheduleBuild2() throws IOException, InterruptedException{
         FreeStyleProject p = j.createFreeStyleProject("project");
         p.setAssignedLabel(j.jenkins.getLabel("nonExist"));
-        p.scheduleBuild(0, new LegacyCodeCause(), new Action[0]);
+        p.scheduleBuild(0, new UserIdCause(), new Action[0]);
         assertNotNull("Project should be in queue.", Queue.getInstance().getItem(p));
         p.setAssignedLabel(null);
         int count = 0;
@@ -448,7 +448,7 @@ public class ProjectTest {
         assertNotNull(ws);
         FilePath path = slave.toComputer().getWorkspaceList().allocate(ws, build).path;
         build.setWorkspace(path);
-        BuildListener listener = new StreamBuildListener(BuildListener.NULL.getLogger(), Charset.defaultCharset());
+        BuildListener listener = new StreamBuildListener(TaskListener.NULL.getLogger(), Charset.defaultCharset());
         assertTrue("Project with null smc should perform checkout without problems.", p.checkout(build, new RemoteLauncher(listener, slave.getChannel(), true), listener, new File(build.getRootDir(),"changelog.xml")));
         p.setScm(scm);
         assertTrue("Project should perform checkout without problems.",p.checkout(build, new RemoteLauncher(listener, slave.getChannel(), true), listener, new File(build.getRootDir(),"changelog.xml")));
@@ -572,8 +572,8 @@ public class ProjectTest {
             }
         } 
         auth.add(Jenkins.READ, user.getId());
-        auth.add(Job.READ, user.getId());
-        auth.add(Job.DELETE, user.getId());
+        auth.add(Item.READ, user.getId());
+        auth.add(Item.DELETE, user.getId());
 
         // use Basic to speedup the test, normally it's pure UI testing
         JenkinsRule.WebClient wc = j.createWebClient();
@@ -608,9 +608,9 @@ public class ProjectTest {
                fail("AccessDeniedException should be thrown.");
             }
         } 
-        auth.add(Job.READ, user.getId());
-        auth.add(Job.BUILD, user.getId());
-        auth.add(Job.WIPEOUT, user.getId());
+        auth.add(Item.READ, user.getId());
+        auth.add(Item.BUILD, user.getId());
+        auth.add(Item.WIPEOUT, user.getId());
         auth.add(Jenkins.READ, user.getId());
         Slave slave = j.createOnlineSlave();
         project.setAssignedLabel(slave.getSelfLabel());
@@ -622,7 +622,7 @@ public class ProjectTest {
         wc.withBasicCredentials(user.getId(), "password");
         WebRequest request = new WebRequest(new URL(wc.getContextPath() + project.getUrl() + "doWipeOutWorkspace"), HttpMethod.POST);
         HtmlPage p = wc.getPage(request);
-        assertEquals(p.getWebResponse().getStatusCode(), 200);
+        assertEquals(200, p.getWebResponse().getStatusCode());
 
         Thread.sleep(500);
         assertFalse("Workspace should not exist.", project.getSomeWorkspace().exists());
@@ -646,8 +646,8 @@ public class ProjectTest {
                fail("AccessDeniedException should be thrown.");
             }
         } 
-        auth.add(Job.READ, user.getId());
-        auth.add(Job.CONFIGURE, user.getId());
+        auth.add(Item.READ, user.getId());
+        auth.add(Item.CONFIGURE, user.getId());
         auth.add(Jenkins.READ, user.getId());
 
         JenkinsRule.WebClient wc = j.createWebClient();
@@ -684,8 +684,8 @@ public class ProjectTest {
                fail("AccessDeniedException should be thrown.");
             }
         } 
-        auth.add(Job.READ, user.getId());
-        auth.add(Job.CONFIGURE, user.getId());
+        auth.add(Item.READ, user.getId());
+        auth.add(Item.CONFIGURE, user.getId());
         auth.add(Jenkins.READ, user.getId());
 
         JenkinsRule.WebClient wc = j.createWebClient();

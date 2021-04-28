@@ -123,7 +123,7 @@ public class WebAppMain implements ServletContextListener {
      * Written for the requirements of JENKINS-50669
      * @return int This returns DEFAULT_RING_BUFFER_SIZE
      * @see <a href="https://issues.jenkins-ci.org/browse/JENKINS-50669">JENKINS-50669</a>
-     * @since TODO
+     * @since 2.259
      */
     public static int getDefaultRingBufferSize() {
         return RingBufferLogHandler.getDefaultRingBufferSize();
@@ -199,7 +199,7 @@ public class WebAppMain implements ServletContextListener {
                 throw new IncompatibleVMDetected(); // nope
             }
 
-//  JNA is no longer a hard requirement. It's just nice to have. See HUDSON-4820 for more context.
+//  JNA is no longer a hard requirement. It's just nice to have. See JENKINS-4820 for more context.
 //            // make sure JNA works. this can fail if
 //            //    - platform is unsupported
 //            //    - JNA is already loaded in another classloader

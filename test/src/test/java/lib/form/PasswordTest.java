@@ -74,8 +74,8 @@ import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.Stapler;
 import org.kohsuke.stapler.StaplerRequest;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import org.springframework.security.core.Authentication;
 
 public class PasswordTest {
@@ -524,7 +524,7 @@ public class PasswordTest {
         }
 
         @Override
-        public void perform(@Nonnull Run<?, ?> run, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
+        public void perform(@NonNull Run<?, ?> run, @NonNull FilePath workspace, @NonNull Launcher launcher, @NonNull TaskListener listener) throws InterruptedException, IOException {
             // do nothing
         }
 
@@ -595,7 +595,7 @@ public class PasswordTest {
         }
 
         @Override
-        public void perform(@Nonnull Run<?, ?> run, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
+        public void perform(@NonNull Run<?, ?> run, @NonNull FilePath workspace, @NonNull Launcher launcher, @NonNull TaskListener listener) throws InterruptedException, IOException {
             // do nothing
         }
 
@@ -624,7 +624,7 @@ public class PasswordTest {
         }
 
         final MockAuthorizationStrategy a = new MockAuthorizationStrategy();
-        a.grant(Jenkins.READ, Job.READ, Job.EXTENDED_READ).everywhere().toEveryone();
+        a.grant(Jenkins.READ, Item.READ, Item.EXTENDED_READ).everywhere().toEveryone();
         j.jenkins.setAuthorizationStrategy(a);
 
         /* Now go to the page without Item/Configure and expect asterisks */
@@ -645,9 +645,9 @@ public class PasswordTest {
             return Job.class;
         }
 
-        @Nonnull
+        @NonNull
         @Override
-        public Collection<? extends Action> createFor(@Nonnull Job target) {
+        public Collection<? extends Action> createFor(@NonNull Job target) {
             return Collections.singletonList(new ActionImpl());
         }
     }

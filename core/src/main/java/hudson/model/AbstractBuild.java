@@ -133,7 +133,7 @@ public abstract class AbstractBuild<P extends AbstractProject<P,R>,R extends Abs
     /**
      * Changes in this build.
      */
-    private volatile transient WeakReference<ChangeLogSet<? extends Entry>> changeSet;
+    private transient volatile WeakReference<ChangeLogSet<? extends Entry>> changeSet;
 
     /**
      * Cumulative list of people who contributed to the build problem.
@@ -156,7 +156,7 @@ public abstract class AbstractBuild<P extends AbstractProject<P,R>,R extends Abs
      */
     protected transient List<Environment> buildEnvironments;
 
-    private transient final LazyBuildMixIn.RunMixIn<P,R> runMixIn = new LazyBuildMixIn.RunMixIn<P,R>() {
+    private final transient LazyBuildMixIn.RunMixIn<P,R> runMixIn = new LazyBuildMixIn.RunMixIn<P,R>() {
         @Override protected R asRun() {
             return _this();
         }
@@ -939,7 +939,7 @@ public abstract class AbstractBuild<P extends AbstractProject<P,R>,R extends Abs
     public EnvVars getEnvironment(TaskListener log) throws IOException, InterruptedException {
         EnvVars env = super.getEnvironment(log);
         FilePath ws = getWorkspace();
-        if (ws != null) { // if this is done very early on in the build, workspace may not be decided yet. see HUDSON-3997
+        if (ws != null) { // if this is done very early on in the build, workspace may not be decided yet. see JENKINS-3997
             env.put("WORKSPACE", ws.getRemote());
             FilePath tempDir = WorkspaceList.tempDir(ws);
             if (tempDir != null) {

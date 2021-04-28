@@ -24,11 +24,13 @@
  */
 package hudson.triggers;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.DependencyRunner;
 import hudson.DependencyRunner.ProjectRunnable;
 import hudson.DescriptorExtensionList;
 import hudson.Extension;
 import hudson.ExtensionPoint;
+import hudson.RestrictedSince;
 import hudson.Util;
 import hudson.model.AbstractProject;
 import hudson.model.Action;
@@ -63,7 +65,10 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 
 import hudson.model.Items;
 import jenkins.model.ParameterizedJobMixIn;
+import jenkins.util.SystemProperties;
 import org.jenkinsci.Symbol;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 
 /**
  * Triggers a {@link Build}.
@@ -215,6 +220,7 @@ public abstract class Trigger<J extends Item> implements Describable<Trigger<?>>
             return MIN;
         }
 
+        @Override
         public long getInitialDelay() {
             return MIN - TimeUnit.SECONDS.toMillis(Calendar.getInstance().get(Calendar.SECOND));
         }
@@ -278,12 +284,13 @@ public abstract class Trigger<J extends Item> implements Describable<Trigger<?>>
                                 long begin_time = System.currentTimeMillis();
                                 t.run();
                                 long end_time = System.currentTimeMillis();
-                                if ((end_time - begin_time) > CRON_THRESHOLD) {
-                                    final String msg = String.format("Trigger %s.run() triggered by %s spent too much time "
-                                                    + "(%s) in its execution, other timers can be affected",
-                                            t.getClass().getName(), p, Util.getTimeSpanString(end_time - begin_time));
+                                if ((end_time - begin_time) > (CRON_THRESHOLD * 1000)) {
+                                    TriggerDescriptor descriptor = t.getDescriptor();
+                                    String name = descriptor.getDisplayName();
+                                    final String msg = String.format("Trigger '%s' triggered by '%s' (%s) spent too much time (%s) in its execution, other timers could be delayed.",
+                                            name, p.getFullDisplayName(), p.getFullName(), Util.getTimeSpanString(end_time - begin_time));
                                     LOGGER.log(Level.WARNING, msg);
-                                    SlowTriggerAdminMonitor.getInstance().report(t.getClass().getName(), msg);
+                                    SlowTriggerAdminMonitor.getInstance().report(descriptor.getClass(), p.getFullName(), end_time - begin_time);
                                 }
                             } catch (Throwable e) {
                                 // t.run() is a plugin, and some of them throw RuntimeException and other things.
@@ -301,7 +308,13 @@ public abstract class Trigger<J extends Item> implements Describable<Trigger<?>>
         }
     }
 
-    public static long CRON_THRESHOLD = 1000*30;    // Default threshold 30s
+    @SuppressFBWarnings("MS_SHOULD_BE_FINAL")
+    @Restricted(NoExternalUse.class)
+    @RestrictedSince("TODO")
+    /**
+     * Used to be milliseconds, now is seconds since Jenkins 2.TODO.
+     */
+    public static /* non-final for Groovy */ long CRON_THRESHOLD = SystemProperties.getLong(Trigger.class.getName() + ".CRON_THRESHOLD", 30L); // Default threshold 30s
 
     private static final Logger LOGGER = Logger.getLogger(Trigger.class.getName());
 

@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 The MIT License
 
@@ -27,7 +28,7 @@ THE SOFTWARE.
   <parent>
     <groupId>org.jenkins-ci.main</groupId>
     <artifactId>jenkins-parent</artifactId>
-    <version>${revision}${changelist}</version>
+    <version>2.289</version>
   </parent>
 
   <artifactId>jenkins-war</artifactId>
@@ -41,7 +42,7 @@ THE SOFTWARE.
     <contextPath>/jenkins</contextPath><!-- context path during test -->
     <host>localhost</host><!-- HTTP listener host/interface -->
     <port>8080</port><!-- HTTP listener port -->
-    <node.version>14.15.1</node.version>
+    <node.version>14.16.0</node.version>
     <yarn.version>1.22.10</yarn.version>
   </properties>
 
@@ -113,10 +114,6 @@ THE SOFTWARE.
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.modules</groupId>
-      <artifactId>ssh-cli-auth</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.jenkins-ci.modules</groupId>
       <artifactId>slave-installer</artifactId>
     </dependency>
     <dependency>
@@ -134,16 +131,6 @@ THE SOFTWARE.
     <dependency>
       <groupId>org.jenkins-ci.modules</groupId>
       <artifactId>systemd-slave-installer</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.jenkins-ci.modules</groupId>
-      <artifactId>sshd</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.jenkins-ci.ui</groupId>
-      <artifactId>handlebars</artifactId>
-      <version>1.1.1</version>
-      <classifier>core-assets</classifier>
     </dependency>
     <dependency>
       <!--
@@ -262,20 +249,8 @@ THE SOFTWARE.
             <configuration>
               <artifactItems>
                 <!--
-                    Detached plugins and their dependencies - detached plugins that used to be bundled plugins
+                  Detached plugins and their dependencies - detached plugins that used to be bundled plugins
                 -->
-                <artifactItem>
-                  <groupId>org.jenkins-ci.plugins</groupId>
-                  <artifactId>ant</artifactId>
-                  <version>1.8</version>
-                  <type>hpi</type>
-                </artifactItem>
-                <artifactItem>
-                  <groupId>org.jenkins-ci.plugins</groupId>
-                  <artifactId>javadoc</artifactId>
-                  <version>1.1</version>
-                  <type>hpi</type>
-                </artifactItem>
                 <artifactItem>
                   <groupId>org.jenkins-ci.plugins</groupId>
                   <artifactId>external-monitor-job</artifactId>
@@ -285,7 +260,7 @@ THE SOFTWARE.
                 <artifactItem>
                   <groupId>org.jenkins-ci.plugins</groupId>
                   <artifactId>ldap</artifactId>
-                  <version>1.26</version> <!-- TODO or pick up https://github.com/jenkinsci/ldap-plugin/pull/49 -->
+                  <version>2.0</version>
                   <type>hpi</type>
                 </artifactItem>
                 <artifactItem>
@@ -373,7 +348,7 @@ THE SOFTWARE.
                 <artifactItem>
                   <groupId>org.jenkins-ci.plugins</groupId>
                   <artifactId>bouncycastle-api</artifactId>
-                  <version>2.16.0</version>
+                  <version>2.20</version>
                   <type>hpi</type>
                 </artifactItem>
                 <artifactItem>
@@ -392,6 +367,12 @@ THE SOFTWARE.
                   <groupId>io.jenkins.plugins</groupId>
                   <artifactId>jaxb</artifactId>
                   <version>2.3.0</version>
+                  <type>hpi</type>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.jenkins-ci.modules</groupId>
+                  <artifactId>sshd</artifactId>
+                  <version>3.0.3</version>
                   <type>hpi</type>
                 </artifactItem>
                 <artifactItem>
@@ -533,8 +514,8 @@ THE SOFTWARE.
   <profiles>
 
     <!--
-        The following profiles are required to integration the node/yarn build into this maven build.
-        Hopefully we can push these profiles down into a parent pom.
+      The following profiles are required to integration the node/yarn build into this maven build.
+      Hopefully we can push these profiles down into a parent pom.
     -->
     <profile>
       <id>yarn-execution</id>
@@ -548,6 +529,7 @@ THE SOFTWARE.
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-enforcer-plugin</artifactId>
+            <!-- Version specified in grandparent POM -->
             <executions>
               <execution>
                 <id>enforce-versions</id>
@@ -571,7 +553,7 @@ THE SOFTWARE.
           <plugin>
             <groupId>com.github.eirslett</groupId>
             <artifactId>frontend-maven-plugin</artifactId>
-            <version>1.11.0</version>
+            <version>1.11.3</version>
             <executions>
 
               <execution>
@@ -656,6 +638,7 @@ THE SOFTWARE.
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-clean-plugin</artifactId>
+            <!-- Version specified in grandparent POM -->
             <configuration>
               <filesets>
                 <fileset>

@@ -24,7 +24,6 @@
 
 package jenkins.util;
 
-import com.google.common.collect.ImmutableSet;
 import hudson.FilePath;
 import hudson.Functions;
 import hudson.Util;
@@ -47,6 +46,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.attribute.PosixFilePermissions;
@@ -55,6 +55,7 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -63,6 +64,7 @@ import java.util.stream.Collectors;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertTrue;
@@ -77,10 +79,10 @@ public class VirtualFileTest {
     @Test public void outsideSymlinks() throws Exception {
         assumeFalse("Symlinks don't work well on Windows", Functions.isWindows());
         File ws = tmp.newFolder("ws");
-        FileUtils.write(new File(ws, "safe"), "safe");
+        FileUtils.write(new File(ws, "safe"), "safe", StandardCharsets.US_ASCII, false);
         Util.createSymlink(ws, "safe", "supported", TaskListener.NULL);
         File other = tmp.newFolder("other");
-        FileUtils.write(new File(other, "secret"), "s3cr3t");
+        FileUtils.write(new File(other, "secret"), "s3cr3t", StandardCharsets.US_ASCII, false);
         Util.createSymlink(ws, "../other/secret", "hack", TaskListener.NULL);
         VirtualFile root = VirtualFile.forFile(ws);
         VirtualFile supported = root.child("supported");
@@ -118,7 +120,7 @@ public class VirtualFileTest {
     @Test public void list() throws Exception {
         File root = tmp.getRoot();
         FilePath rootF = new FilePath(root);
-        Set<String> paths = ImmutableSet.of("top.txt", "sub/mid.txt", "sub/subsub/lowest.txt", ".hg/config.txt", "very/deep/path/here");
+        Set<String> paths = new HashSet<>(Arrays.asList("top.txt", "sub/mid.txt", "sub/subsub/lowest.txt", ".hg/config.txt", "very/deep/path/here"));
         for (String path : paths) {
             rootF.child(path).write("", null);
         }
@@ -731,19 +733,19 @@ public class VirtualFileTest {
         File aaa = new File(aa, "aaa");
         aaa.mkdirs();
         File aaTxt = new File(aa, "aa.txt");
-        FileUtils.write(aaTxt, "aa");
+        FileUtils.write(aaTxt, "aa", StandardCharsets.US_ASCII, false);
 
         File ab = new File(a, "ab");
         ab.mkdirs();
         File abTxt = new File(ab, "ab.txt");
-        FileUtils.write(abTxt, "ab");
+        FileUtils.write(abTxt, "ab", StandardCharsets.US_ASCII, false);
 
         File b = new File(root, "b");
 
         File ba = new File(b, "ba");
         ba.mkdirs();
         File baTxt = new File(ba, "ba.txt");
-        FileUtils.write(baTxt, "ba");
+        FileUtils.write(baTxt, "ba", StandardCharsets.US_ASCII, false);
 
         File _a = new File(b, "_a");
         new FilePath(_a).symlinkTo(a.getAbsolutePath(), TaskListener.NULL);
@@ -1346,7 +1348,7 @@ public class VirtualFileTest {
         File childFile1 = new File(parentFile, child1);
         VirtualFile vf1 = new VirtualFileMinimalImplementation(childFile1);
         VirtualFile vf2 = null;
-        assertFalse(vf1.equals(vf2));
+        assertNotEquals(vf1, vf2);
     }
 
     @Test
@@ -1359,7 +1361,7 @@ public class VirtualFileTest {
         String child2 = "child2";
         File childFile2 = new File(parentFile, child2);
         VirtualFile vf2 = new VirtualFileMinimalImplementation(childFile2);
-        assertFalse(vf1.equals(vf2));
+        assertNotEquals(vf1, vf2);
     }
 
     @Test
@@ -1372,7 +1374,7 @@ public class VirtualFileTest {
         String child2 = child1;
         File childFile2 = new File(parentFile, child2);
         VirtualFile vf2 = new VirtualFileMinimalImplementation(childFile2);
-        assertTrue(vf1.equals(vf2));
+        assertEquals(vf1, vf2);
     }
 
     @Test
@@ -1382,7 +1384,7 @@ public class VirtualFileTest {
         String child1 = "child1";
         File childFile1 = new File(parentFile, child1);
         VirtualFile vf1 = new VirtualFileMinimalImplementation(childFile1);
-        assertFalse(vf1.equals(child1));
+        assertNotEquals(vf1, child1);
     }
 
     @Test

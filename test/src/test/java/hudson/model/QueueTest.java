@@ -52,7 +52,6 @@ import hudson.model.Cause.UserIdCause;
 import hudson.model.Queue.BlockedItem;
 import hudson.model.Queue.Executable;
 import hudson.model.Queue.WaitingItem;
-import hudson.model.labels.LabelExpression;
 import hudson.model.listeners.SaveableListener;
 import hudson.model.queue.CauseOfBlockage;
 import hudson.model.queue.QueueTaskDispatcher;
@@ -147,6 +146,7 @@ import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import org.junit.Ignore;
@@ -468,7 +468,8 @@ public class QueueTest {
         assertFalse(Queue.isBlockedByShutdown(task));
         r.waitUntilNoActivity();
         assertEquals(1, cnt.get());
-        assert task.exec instanceof OneOffExecutor : task.exec;
+        assertNotNull(task.exec);
+        assertThat(task.exec, instanceOf(OneOffExecutor.class));
     }
 
     @Issue("JENKINS-24519")
@@ -481,7 +482,8 @@ public class QueueTest {
         r.createSlave(label);
         r.waitUntilNoActivity();
         assertEquals(1, cnt.get());
-        assert task.exec instanceof OneOffExecutor : task.exec;
+        assertNotNull(task.exec);
+        assertThat(task.exec, instanceOf(OneOffExecutor.class));
     }
 
     @Issue("JENKINS-41127")
@@ -734,7 +736,7 @@ public class QueueTest {
         TopLevelItemDescriptor descriptor = new TopLevelItemDescriptor(FreeStyleProject.class){
          @Override
             public FreeStyleProject newInstance(ItemGroup parent, String name) {
-                return (FreeStyleProject) new FreeStyleProject(parent,name){
+                return new FreeStyleProject(parent,name){
                      @Override
                     public Label getAssignedLabel(){
                         throw new IllegalArgumentException("Test exception"); //cause dead of executor
@@ -878,7 +880,7 @@ public class QueueTest {
         matrixProject.setAxes(new AxisList(
                 new Axis("axis", "a", "b")
         ));
-        Label label = LabelExpression.get("aws-linux-dummy");
+        Label label = Label.get("aws-linux-dummy");
         DummyCloudImpl dummyCloud = new DummyCloudImpl(r, 0);
         dummyCloud.label = label;
         r.jenkins.clouds.add(dummyCloud);
@@ -897,7 +899,7 @@ public class QueueTest {
                 new Axis("axis", "a", "b")
         ));
 
-        Label label = LabelExpression.get("aws-linux-dummy");
+        Label label = Label.get("aws-linux-dummy");
         DummyCloudImpl dummyCloud = new DummyCloudImpl(r, 0);
         dummyCloud.label = label;
         BlockDownstreamProjectExecution property = new BlockDownstreamProjectExecution();
@@ -1016,7 +1018,7 @@ public class QueueTest {
             if (element.getNodeName().equals("task")) {
                 for (DomNode child: ((DomElement) element).getChildNodes()) {
                     if (child.getNodeName().equals("name")) {
-                        assertEquals(child.asText(), "project");
+                        assertEquals("project", child.asText());
                     } else if (child.getNodeName().equals("url")) {
                         assertNotNull(child.asText());
                     }

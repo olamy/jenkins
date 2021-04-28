@@ -326,8 +326,8 @@ public class XStream2 extends XStream {
         mapperInjectionPoint.setDelegate(m);
     }
 
-    final static class MapperInjectionPoint extends MapperDelegate {
-        public MapperInjectionPoint(Mapper wrapped) {
+    static final class MapperInjectionPoint extends MapperDelegate {
+        MapperInjectionPoint(Mapper wrapped) {
             super(wrapped);
         }
 
@@ -361,7 +361,7 @@ public class XStream2 extends XStream {
      * Prior to Hudson 1.106, XStream 1.1.x was used which encoded "$" in class names
      * as "-" instead of "_-" that is used now.  Up through Hudson 1.348 compatibility
      * for old serialized data was maintained via {@link com.thoughtworks.xstream.mapper.XStream11XmlFriendlyMapper}.
-     * However, it was found (HUDSON-5768) that this caused fields with "__" to fail
+     * However, it was found (JENKINS-5768) that this caused fields with "__" to fail
      * deserialization due to double decoding.  Now this class is used for compatibility.
      */
     private class CompatibilityMapper extends MapperWrapper {
@@ -473,7 +473,7 @@ public class XStream2 extends XStream {
      *     ...
      * </pre>
      */
-    public static abstract class PassthruConverter<T> implements Converter {
+    public abstract static class PassthruConverter<T> implements Converter {
         private Converter converter;
 
         public PassthruConverter(XStream2 xstream) {

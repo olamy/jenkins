@@ -3,7 +3,7 @@ package hudson.security;
 import com.gargoylesoftware.htmlunit.CookieManager;
 import com.gargoylesoftware.htmlunit.util.Cookie;
 import com.gargoylesoftware.htmlunit.xml.XmlPage;
-import com.google.common.collect.ImmutableList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.stream.Collectors;
 
@@ -16,6 +16,7 @@ import static org.hamcrest.Matchers.emptyString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -25,7 +26,6 @@ import org.jvnet.hudson.test.JenkinsRule;
 import org.kohsuke.stapler.Stapler;
 import test.security.realm.InMemorySecurityRealm;
 
-import net.jcip.annotations.GuardedBy;
 import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.Matchers.is;
@@ -128,7 +128,7 @@ public class TokenBasedRememberMeServices2Test {
         wc.executeOnServer(() -> {
             Authentication a = Jenkins.getAuthentication2();
             assertEquals("bob", a.getName());
-            assertEquals(ImmutableList.of("authenticated", "myteam"), a.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.toList()));
+            assertEquals(Arrays.asList("authenticated", "myteam"), a.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.toList()));
             return null;
         });
     }
@@ -316,7 +316,6 @@ public class TokenBasedRememberMeServices2Test {
 
     private static class LoadUserCountingSecurityRealm extends InMemorySecurityRealm {
         // if this class wasn't serialized into config.xml, this could be replaced by @Spy from Mockito
-        @GuardedBy("this")
         private int counter = 0;
 
         @Override

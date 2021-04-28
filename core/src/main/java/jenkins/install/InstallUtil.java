@@ -46,7 +46,7 @@ import org.apache.commons.lang.StringUtils;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 
-import com.google.common.base.Function;
+import java.util.function.Function;
 import com.thoughtworks.xstream.XStream;
 
 import hudson.Functions;
@@ -80,7 +80,7 @@ public class InstallUtil {
      */
     private static class ProviderChain<T> implements Provider<T> {
         private final Iterator<Function<Provider<T>,T>> functions;
-        public ProviderChain(Iterator<Function<Provider<T>,T>> functions) {
+        ProviderChain(Iterator<Function<Provider<T>,T>> functions) {
             this.functions = functions;
         }
         @Override

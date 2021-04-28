@@ -34,7 +34,6 @@ import com.gargoylesoftware.htmlunit.html.HtmlAnchor;
 import com.gargoylesoftware.htmlunit.html.HtmlForm;
 import com.gargoylesoftware.htmlunit.html.HtmlInput;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
-import com.google.common.collect.Iterables;
 import hudson.FilePath;
 import hudson.Functions;
 import hudson.Launcher;
@@ -143,7 +142,7 @@ public class AbstractProjectTest {
     @Test
     @PresetData(DataSet.ANONYMOUS_READONLY)
     public void wipeWorkspaceProtected2() throws Exception {
-        ((GlobalMatrixAuthorizationStrategy) j.jenkins.getAuthorizationStrategy()).add(AbstractProject.WORKSPACE, "anonymous");
+        ((GlobalMatrixAuthorizationStrategy) j.jenkins.getAuthorizationStrategy()).add(Item.WORKSPACE, "anonymous");
 
         // make sure that the deletion is protected in the same way
         wipeWorkspaceProtected();
@@ -196,7 +195,7 @@ public class AbstractProjectTest {
 
         form = j.createWebClient().getPage(p, "configure").getFormByName("config");
         input = form.getInputByName("blockBuildWhenUpstreamBuilding");
-        assert input.isChecked() : "blockBuildWhenUpstreamBuilding check box is not checked.";
+        assertTrue("blockBuildWhenUpstreamBuilding check box is not checked.", input.isChecked());
     }
 
     /**
@@ -282,19 +281,19 @@ public class AbstractProjectTest {
     public void renameJobLostBuilds() throws Exception {
         FreeStyleProject p = j.createFreeStyleProject("initial");
         j.assertBuildStatusSuccess(p.scheduleBuild2(0));
-        assertEquals(1, Iterables.size(p.getBuilds()));
+        assertEquals(1, p.getBuilds().stream().count());
         p.renameTo("edited");
         p._getRuns().purgeCache();
-        assertEquals(1, Iterables.size(p.getBuilds()));
+        assertEquals(1, p.getBuilds().stream().count());
         MockFolder d = j.jenkins.createProject(MockFolder.class, "d");
         Items.move(p, d);
         assertEquals(p, j.jenkins.getItemByFullName("d/edited"));
         p._getRuns().purgeCache();
-        assertEquals(1, Iterables.size(p.getBuilds()));
+        assertEquals(1, p.getBuilds().stream().count());
         d.renameTo("d2");
         p = j.jenkins.getItemByFullName("d2/edited", FreeStyleProject.class);
         p._getRuns().purgeCache();
-        assertEquals(1, Iterables.size(p.getBuilds()));
+        assertEquals(1, p.getBuilds().stream().count());
     }
 
     @Test

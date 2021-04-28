@@ -572,7 +572,7 @@ public abstract class PluginManager extends AbstractModelObject implements OnMas
                                     return;
                                 }
                                 try {
-                                    p.getPlugin().postInitialize();
+                                    p.getPluginOrFail().postInitialize();
                                 } catch (Exception e) {
                                     failedPlugins.add(new FailedPlugin(p.getShortName(), e));
                                     activePlugins.remove(p);
@@ -978,7 +978,9 @@ public abstract class PluginManager extends AbstractModelObject implements OnMas
             throw new IOException("Failed to refresh extensions after installing some plugins", e);
         }
         for (PluginWrapper p : plugins) {
-          p.getPlugin().postInitialize();
+            //TODO:According to the postInitialize() documentation, one may expect that
+            //p.getPluginOrFail() NPE will continue the initialization. Keeping the original behavior ATM
+          p.getPluginOrFail().postInitialize();
         }
 
         // run initializers in the added plugins
@@ -1113,7 +1115,7 @@ public abstract class PluginManager extends AbstractModelObject implements OnMas
             final JarURLConnection jarURLConnection = (JarURLConnection) uc;
             final String entryName = jarURLConnection.getEntryName();
             
-            try(final JarFile jarFile = jarURLConnection.getJarFile()) {
+            try(JarFile jarFile = jarURLConnection.getJarFile()) {
                 final JarEntry entry = (entryName != null && jarFile != null) ? jarFile.getJarEntry(entryName) : null;
                 if (entry != null) {
                     try(InputStream i = jarFile.getInputStream(entry)) {
@@ -1706,6 +1708,7 @@ public abstract class PluginManager extends AbstractModelObject implements OnMas
         return installJobs;
     }
 
+    @CheckForNull
     private UpdateSite.Plugin getPlugin(String pluginName, String siteName) {
         UpdateSite updateSite = Jenkins.get().getUpdateCenter().getById(siteName);
         if (updateSite == null) {
@@ -1770,6 +1773,9 @@ public abstract class PluginManager extends AbstractModelObject implements OnMas
             File t = File.createTempFile("uploaded", ".jpi");
             t.deleteOnExit();
             try {
+                // TODO Remove this workaround after FILEUPLOAD-293 is resolved.
+                t.delete();
+
                 fileItem.write(t);
             } catch (Exception e) {
                 // Exception thrown is too generic so at least limit the scope where it can occur
@@ -2220,6 +2226,7 @@ public abstract class PluginManager extends AbstractModelObject implements OnMas
             return "classLoader " +  getClass().getName();
         }
     }
+    @SuppressFBWarnings("MS_SHOULD_BE_FINAL")
     public static boolean FAST_LOOKUP = !SystemProperties.getBoolean(PluginManager.class.getName()+".noFastLookup");
 
     /** @deprecated in Jenkins 2.222 use {@link Jenkins#ADMINISTER} instead */
@@ -2424,5 +2431,6 @@ public abstract class PluginManager extends AbstractModelObject implements OnMas
      * Escape hatch for StaplerProxy-based access control
      */
     @Restricted(NoExternalUse.class)
+    @SuppressFBWarnings("MS_SHOULD_BE_FINAL")
     public static /* Script Console modifiable */ boolean SKIP_PERMISSION_CHECK = Boolean.getBoolean(PluginManager.class.getName() + ".skipPermissionCheck");
 }

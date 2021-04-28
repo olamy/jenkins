@@ -247,7 +247,7 @@ public class ListViewTest {
         ListView v = new ListView("v", j.jenkins);
         v.add(p);
         j.jenkins.addView(v);
-        try (ACLContext acl = ACL.as(User.get("alice"))) {
+        try (ACLContext acl = ACL.as(User.getOrCreateByIdOrFullName("alice"))) {
             p.renameTo("p2");
         }
         assertEquals(Collections.singletonList(p), v.getItems());
@@ -294,7 +294,7 @@ public class ListViewTest {
             view.doRemoveJobFromView("job2");
             fail("Remove job2");
         } catch(Failure e) {
-            assertEquals(e.getMessage(), "Query parameter 'name' does not correspond to a known and readable item");
+            assertEquals("Query parameter 'name' does not correspond to a known and readable item", e.getMessage());
         }
     }
 

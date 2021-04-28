@@ -25,11 +25,11 @@
  */
 package hudson;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.model.Computer;
 import hudson.model.Slave;
 import hudson.security.*;
 
-import java.text.SimpleDateFormat;
 import java.util.function.Predicate;
 import jenkins.util.SystemProperties;
 import hudson.cli.CLICommand;
@@ -109,6 +109,7 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -160,7 +161,7 @@ import org.kohsuke.stapler.Ancestor;
 import org.kohsuke.stapler.Stapler;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
-import org.kohsuke.stapler.jelly.InternationalizedStringExpression.RawHtmlArgument;
+import org.kohsuke.stapler.RawHtmlArgument;
 
 import hudson.model.PasswordParameterDefinition;
 import hudson.util.RunList;
@@ -191,6 +192,7 @@ public class Functions {
     private static Logger LOGGER = Logger.getLogger(Functions.class.getName());
 
     @Restricted(NoExternalUse.class)
+    @SuppressFBWarnings("MS_SHOULD_BE_FINAL")
     public static /* non-final */ boolean UI_REFRESH = SystemProperties.getBoolean("jenkins.ui.refresh");
 
     public Functions() {
@@ -236,7 +238,7 @@ public class Functions {
      */
     @Restricted(NoExternalUse.class)
     public static String localDate(Date date) {
-        return SimpleDateFormat.getDateInstance(SimpleDateFormat.SHORT).format(date);
+        return DateFormat.getDateInstance(DateFormat.SHORT).format(date);
     }
 
     public static String rfc822Date(Calendar cal) {
@@ -644,6 +646,7 @@ public class Functions {
     /**
      * Set to true if you need to use the debug version of YUI.
      */
+    @SuppressFBWarnings("MS_SHOULD_BE_FINAL")
     public static boolean DEBUG_YUI = SystemProperties.getBoolean("debug.YUI");
 
     /**
@@ -1449,7 +1452,7 @@ public class Functions {
     private static class ThreadSorterBase {
         protected Map<Long,String> map = new HashMap<>();
 
-        public ThreadSorterBase() {
+        ThreadSorterBase() {
             ThreadGroup tg = Thread.currentThread().getThreadGroup();
             while (tg.getParent() != null) tg = tg.getParent();
             Thread[] threads = new Thread[tg.activeCount()*2];
@@ -1946,7 +1949,7 @@ public class Functions {
      * Gets all the {@link PageDecorator}s.
      */
     public static List<PageDecorator> getPageDecorators() {
-        // this method may be called to render start up errors, at which point Hudson doesn't exist yet. see HUDSON-3608
+        // this method may be called to render start up errors, at which point Hudson doesn't exist yet. see JENKINS-3608
         if(Jenkins.getInstanceOrNull()==null)  return Collections.emptyList();
         return PageDecorator.all();
     }

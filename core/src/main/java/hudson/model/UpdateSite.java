@@ -47,7 +47,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -235,14 +234,14 @@ public class UpdateSite {
         }
 
         if (signatureCheck) {
-            FormValidation e = verifySignature(o);
+            FormValidation e = verifySignatureInternal(o);
             if (e.kind!=Kind.OK) {
                 LOGGER.severe(e.toString());
                 return e;
             }
         }
 
-        LOGGER.finest("Obtained the latest update center data file for UpdateSource " + id);
+        LOGGER.fine(() -> "Obtained the latest update center data file for UpdateSource " + id);
         retryWindow = 0;
         getDataFile().write(json);
         data = new Data(o);
@@ -250,7 +249,7 @@ public class UpdateSite {
     }
 
     public FormValidation doVerifySignature() throws IOException {
-        return verifySignature(getJSONObject());
+        return verifySignatureInternal(getJSONObject());
     }
 
     /**
@@ -270,7 +269,8 @@ public class UpdateSite {
     /**
      * Verifies the signature in the update center data file.
      */
-    private FormValidation verifySignature(JSONObject o) throws IOException {
+    @Restricted(NoExternalUse.class)
+    public final FormValidation verifySignatureInternal(JSONObject o) throws IOException {
         return getJsonSignatureValidator().verifySignature(o);
     }
 
@@ -391,15 +391,12 @@ public class UpdateSite {
             if(p.getInstalled()==null)
                 r.add(p);
         }
-        r.sort(new Comparator<Plugin>() {
-            @Override
-            public int compare(Plugin plugin, Plugin t1) {
-                final int pop = t1.popularity.compareTo(plugin.popularity);
-                if (pop != 0) {
-                    return pop; // highest popularity first
-                }
-                return plugin.getDisplayName().compareTo(plugin.getDisplayName());
+        r.sort((plugin, t1) -> {
+            final int pop = t1.popularity.compareTo(plugin.popularity);
+            if (pop != 0) {
+                return pop; // highest popularity first
             }
+            return plugin.getDisplayName().compareTo(t1.getDisplayName());
         });
         return r;
     }
@@ -411,8 +408,9 @@ public class UpdateSite {
      *      The short name of the plugin. Corresponds to {@link PluginWrapper#getShortName()}.
      *
      * @return
-     *      null if no such information is found.
+     *      {@code null} if no such information is found.
      */
+    @CheckForNull
     public Plugin getPlugin(String artifactId) {
         Data dt = getData();
         if(dt==null)    return null;
@@ -1513,7 +1511,7 @@ public class UpdateSite {
 
         /**
          * Checks whether a plugin has a desired category
-         * @since TODO
+         * @since 2.272
          */
         public boolean hasCategory(String category) {
             if (categories == null) {
@@ -1525,7 +1523,7 @@ public class UpdateSite {
 
         /**
          * Get categories stream for further search.
-         * @since TODO
+         * @since 2.272
          */
         public Stream<String> getCategoriesStream() {
             return categories != null ? Arrays.stream(categories) : Stream.empty();
