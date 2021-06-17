@@ -131,7 +131,7 @@ public class FunctionsTest {
             assertEquals(contextPath + "/" + itUrl + path, result);
         }
     }
-    
+
     @Test
     @PrepareForTest({Stapler.class, Jenkins.class})
     public void testGetRelativeLinkTo_JobContainedInView() throws Exception{
@@ -185,9 +185,9 @@ public class FunctionsTest {
         String result = Functions.getRelativeLinkTo(i);
         assertEquals("/jenkins/job/i/", result);
     }
-    
+
     private interface TopLevelItemAndItemGroup <T extends TopLevelItem> extends TopLevelItem, ItemGroup<T>, ViewGroup {}
-    
+
     @Test
     @PrepareForTest({Stapler.class,Jenkins.class})
     public void testGetRelativeLinkTo_JobContainedInViewWithinItemGroup() throws Exception{
@@ -232,7 +232,7 @@ public class FunctionsTest {
         when(i.getFullDisplayName()).thenReturn("displayName");
         assertEquals("displayName",Functions.getRelativeDisplayNameFrom(i, null));
     }
-    
+
     @Test
     public void testGetRelativeDisplayNameInsideItemGroup() {
         Item i = mock(Item.class);
@@ -257,7 +257,7 @@ public class FunctionsTest {
         List<Ancestor> ancestorsList = Arrays.asList(ancestors);
         when(req.getAncestors()).thenReturn(ancestorsList);
     }
-    
+
     private TopLevelItem createMockItem(ItemGroup p, String shortUrl) {
         return createMockItem(p, shortUrl, shortUrl);
     }
@@ -276,7 +276,7 @@ public class FunctionsTest {
         when(Jenkins.get()).thenReturn(j);
         return j;
     }
-    
+
     private static Ancestor createAncestor(Object o, String relativePath) {
         Ancestor a = mock(Ancestor.class);
         when(a.getObject()).thenReturn(o);

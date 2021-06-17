@@ -1,20 +1,20 @@
 /*
  * The MIT License
- * 
+ *
  * Copyright (c) 2004-2010, Sun Microsystems, Inc., Kohsuke Kawaguchi,
  * Yahoo! Inc., Stephen Connolly, Tom Huybrechts, Alan Harder, Manufacture
  * Francaise des Pneumatiques Michelin, Romain Seguy
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -146,6 +146,8 @@ import jenkins.model.Jenkins;
 import jenkins.model.ModelObjectWithChildren;
 import jenkins.model.ModelObjectWithContextMenu;
 
+import jenkins.views.CbHeader;
+import jenkins.views.OSSHeaderLayout;
 import org.apache.commons.jelly.JellyContext;
 import org.apache.commons.jelly.JellyTagException;
 import org.apache.commons.jelly.Script;
@@ -214,7 +216,7 @@ public class Functions {
     public static boolean isModelWithChildren(Object o) {
         return o instanceof ModelObjectWithChildren;
     }
-    
+
     @Deprecated
     public static boolean isMatrixProject(Object o) {
         return o != null && o.getClass().getName().equals("hudson.matrix.MatrixProject");
@@ -518,7 +520,7 @@ public class Functions {
 
     /**
      * Gets the system property indicated by the specified key.
-     * 
+     *
      * Delegates to {@link SystemProperties#getString(String)}.
      */
     @Restricted(DoNotUse.class)
@@ -543,7 +545,7 @@ public class Functions {
     public static boolean isWindows() {
         return File.pathSeparatorChar==';';
     }
-    
+
     public static boolean isGlibcSupported() {
         try {
             GNUCLibrary.LIBC.getpid();
@@ -847,7 +849,7 @@ public class Functions {
     public static void checkPermission(Object object, Permission permission) throws IOException, ServletException {
         if (permission == null)
             return;
-        
+
         if (object instanceof AccessControlled)
             checkPermission((AccessControlled) object,permission);
         else {
@@ -1192,7 +1194,7 @@ public class Functions {
             if (ac != null) {
                 return hasAnyPermission(ac, permissions);
             }
-            
+
             return hasAnyPermission(Jenkins.get(), permissions);
         }
     }
@@ -1329,20 +1331,20 @@ public class Functions {
             i = (Item) ig;
         }
     }
-    
+
     private static String normalizeURI(String uri) {
         return URI.create(uri).normalize().toString();
     }
-    
+
     /**
      * Gets all the {@link TopLevelItem}s recursively in the {@link ItemGroup} tree.
-     * 
+     *
      * @since 1.512
      */
     public static List<TopLevelItem> getAllTopLevelItems(ItemGroup root) {
       return root.getAllItems(TopLevelItem.class);
     }
-    
+
     /**
      * Gets the relative name or display name to the given item from the specified group.
      *
@@ -1361,7 +1363,7 @@ public class Functions {
         if (p == null) return null;
         if (g == null) return useDisplayName ? p.getFullDisplayName() : p.getFullName();
         String separationString = useDisplayName ? " » " : "/";
-        
+
         // first list up all the parents
         Map<ItemGroup,Integer> parents = new HashMap<>();
         int depth=0;
@@ -1395,7 +1397,7 @@ public class Functions {
                 return null;
         }
     }
-    
+
     /**
      * Gets the name to the given item relative to given group.
      *
@@ -1410,9 +1412,9 @@ public class Functions {
     @Nullable
     public static String getRelativeNameFrom(@CheckForNull Item p, @CheckForNull ItemGroup g) {
         return getRelativeNameFrom(p, g, false);
-    }    
-    
-    
+    }
+
+
     /**
      * Gets the relative display name to the given item from the specified group.
      *
@@ -2120,7 +2122,7 @@ public class Functions {
     public List filterDescriptors(Object context, Iterable descriptors) {
         return DescriptorVisibilityFilter.apply(context,descriptors);
     }
-    
+
     /**
      * Returns true if we are running unit tests.
      */
@@ -2165,7 +2167,7 @@ public class Functions {
     public static String getCurrentDescriptorByNameUrl() {
         return Descriptor.getCurrentDescriptorByNameUrl();
     }
-    
+
     public static String setCurrentDescriptorByNameUrl(String value) {
         String o = getCurrentDescriptorByNameUrl();
         Stapler.getCurrentRequest().setAttribute("currentDescriptorByNameUrl", value);
@@ -2218,11 +2220,11 @@ public class Functions {
     public String getUserAvatar(User user, String avatarSize) {
         return getAvatar(user,avatarSize);
     }
-    
-    
+
+
     /**
      * Returns human readable information about file size
-     * 
+     *
      * @param size file size in bytes
      * @return file size in appropriate unit
      */
@@ -2295,5 +2297,27 @@ public class Functions {
         } else {
             return true;
         }
+    }
+
+    // CloudBees proprietary functions
+    // TODO remove if we decide to rid of the former header completely
+    @Restricted(NoExternalUse.class)
+    public static OSSHeaderLayout ossHeader() {
+        return ExtensionList.lookupSingleton(OSSHeaderLayout.class);
+    }
+
+    @Restricted(NoExternalUse.class)
+    @CheckForNull
+    public static CbHeader honeyUIHeader() {
+        List<CbHeader> all = ExtensionList.lookup(CbHeader.class).stream().filter(cbHeader -> cbHeader.isCbHeaderEnabled()).collect(Collectors.toList());
+
+        if (all.size() > 0) {
+            if (all.size() > 1) {
+                LOGGER.warning("More than one configured header. This should not happen. Serving the first one and please review");
+            }
+            return all.get(0);
+        }
+
+        return null;
     }
 }

@@ -12,8 +12,10 @@ import org.apache.commons.io.FileUtils;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.MockAuthorizationStrategy;
 
@@ -60,7 +62,8 @@ public class CLIEnvVarTest {
         );
     }
 
-    @Test
+    @Test @Issue("PRD-677")
+    @Ignore("variable set in rosie env by default")
     public void testWithoutSOptionAndWithoutJENKINS_URL() throws Exception {
         Assume.assumeThat(System.getenv("JENKINS_URL"), is(nullValue())); // TODO instead remove it from the process env?
         assertNotEquals(0, launch("java",
