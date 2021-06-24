@@ -64,9 +64,8 @@ public class BouncyCastleFIPSIntaller {
      *            non FIPS compliant algorithms.
      */
     public static synchronized void install(boolean fipsOnlyAlgorithms) {
-        // whilst it seems helpful to only do this once per JVM,  
         // only install it once per JVM (ideally)!
-        // due to tests and funky classloaders check if we actually have the same class not something that no longer exists.
+        // due to tests and funky classloaders over remoting check if we actually have the same class not something that no longer exists.
         if (!(Security.getProvider(BouncyCastleFipsProvider.PROVIDER_NAME) instanceof BouncyCastleFipsProvider)) {
             LOG.log(Level.CONFIG, "Configuring java.security providers...");
 
@@ -99,8 +98,7 @@ public class BouncyCastleFIPSIntaller {
                 Security.removeProvider(p.getName());
             }
             */
-            
-            
+
             // to better understand the behaviour and detect the fallback
             // warning, during startup there seems to be some false positives, to be double checked
             // TODO if we want to run in compliance mode then add the logging provider then add back all the other
@@ -123,9 +121,6 @@ public class BouncyCastleFIPSIntaller {
                 LOG.log(Level.CONFIG, "installing FIPSSecurityManager");
                 System.setSecurityManager(new FIPSSecurityManager());
             }
-            // finally set the flag to say we have installed.
-            //bcInstalled = true;
-            // TODO this breaks unit tests (unsuprisingly!)
         } else {
             LOG.log(Level.CONFIG, "java.security providers already configured, skipping request");
         }

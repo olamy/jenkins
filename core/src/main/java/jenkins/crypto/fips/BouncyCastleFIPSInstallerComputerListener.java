@@ -26,7 +26,7 @@ public class BouncyCastleFIPSInstallerComputerListener extends ComputerListener 
     public void preOnline(Computer c, Channel channel, FilePath root, TaskListener listener)
             throws IOException, InterruptedException {
         try {
-            // we should not need to preload the jars as the installer class instantiated ovjects from them so they should appear magically.
+            // we should not need to preload the jars as the installer class instantiates objects from them so they should appear magically.
             //channel.preloadJar(BouncyCastleFipsProvider.class.getClassLoader(), BouncyCastleFipsProvider.class); // bc-fips
             //channel.preloadJar(BouncyCastleJsseProvider.class.getClassLoader(), BouncyCastleJsseProvider.class); // bc-tls
 
