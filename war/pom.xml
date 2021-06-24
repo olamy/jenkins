@@ -347,12 +347,6 @@ THE SOFTWARE.
                 </artifactItem>
                 <artifactItem>
                   <groupId>org.jenkins-ci.plugins</groupId>
-                  <artifactId>bouncycastle-api</artifactId>
-                  <version>2.20</version>
-                  <type>hpi</type>
-                </artifactItem>
-                <artifactItem>
-                  <groupId>org.jenkins-ci.plugins</groupId>
                   <artifactId>command-launcher</artifactId>
                   <version>1.2</version>
                   <type>hpi</type>
