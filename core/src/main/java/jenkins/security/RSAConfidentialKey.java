@@ -77,14 +77,14 @@ public abstract class RSAConfidentialKey extends ConfidentialKey {
                 lastCS = cs;
                 byte[] payload = load();
                 if (payload == null) {
-                    KeyPairGenerator gen = KeyPairGenerator.getInstance("RSA");
+                    KeyPairGenerator gen = KeyPairGenerator.getInstance("RSA", "BCFIPS");
                     gen.initialize(2048, cs.secureRandom()); // going beyond 2048 requires crypto extension
                     KeyPair keys = gen.generateKeyPair();
                     priv = (RSAPrivateKey) keys.getPrivate();
                     pub = (RSAPublicKey) keys.getPublic();
                     store(priv.getEncoded());
                 } else {
-                    KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+                    KeyFactory keyFactory = KeyFactory.getInstance("RSA", "BCFIPS");
                     priv = (RSAPrivateKey) keyFactory.generatePrivate(new PKCS8EncodedKeySpec(payload));
 
                     RSAPrivateCrtKey pks = (RSAPrivateCrtKey) priv;

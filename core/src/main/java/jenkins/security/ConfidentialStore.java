@@ -5,12 +5,14 @@ import hudson.Lookup;
 import hudson.init.InitMilestone;
 import hudson.util.Secret;
 import jenkins.model.Jenkins;
+import org.bouncycastle.crypto.fips.FipsDRBG;
 import org.kohsuke.MetaInfServices;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
-import java.security.NoSuchAlgorithmException;
+import java.nio.charset.StandardCharsets;
+import java.rmi.dgc.VMID;
 import java.security.SecureRandom;
 import java.util.Iterator;
 import java.util.Map;
@@ -115,13 +117,16 @@ public abstract class ConfidentialStore {
         private final Map<String, byte[]> data = new ConcurrentHashMap<>();
 
         Mock() {
-            // Use a predictable seed to make tests more reproducible.
-            try {
-                rand = SecureRandom.getInstance("SHA1PRNG");
-            } catch (NoSuchAlgorithmException x) {
-                throw new AssertionError("https://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html#SecureRandom", x);
-            }
-            rand.setSeed(new byte[] {1, 2, 3, 4});
+            SecureRandom entropySource = new SecureRandom();
+            // unable to just use the entropySOurce directly otherise we see
+            // RSAConfidentialKeyTest.loadingExistingKey:42 Attempt to create key pair with unapproved RNG: RSA
+            rand =  FipsDRBG.SHA512_HMAC.fromEntropySource(entropySource, true)
+                    .setPersonalizationString(new VMID().toString().getBytes(StandardCharsets.UTF_8))
+                    .setEntropyBitsRequired(256)
+                    .setSecurityStrength(256)
+                    .build(entropySource.generateSeed(256 / (2 * 8))
+                           , false,
+                           "Whatever Trevor!".toString().getBytes(StandardCharsets.UTF_8));
         }
 
         void clear() {
