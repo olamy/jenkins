@@ -189,6 +189,7 @@ import java.util.concurrent.CountDownLatch;
 import jenkins.ExtensionComponentSet;
 import jenkins.ExtensionRefreshException;
 import jenkins.InitReactorRunner;
+import jenkins.crypto.fips.BouncyCastleFIPSIntaller;
 import jenkins.install.InstallState;
 import jenkins.install.SetupWizard;
 import jenkins.model.ProjectNamingStrategy.DefaultProjectNamingStrategy;
@@ -5412,6 +5413,7 @@ public class Jenkins extends AbstractCIBase implements DirectlyModifiableTopLeve
     ));
 
     static {
+        BouncyCastleFIPSIntaller.install();
         final String paths = SystemProperties.getString(Jenkins.class.getName() + ".additionalReadablePaths");
         if (paths != null) {
             LOGGER.info(() -> "SECURITY-2047 override: Adding the following paths to ALWAYS_READABLE_PATHS: " + paths);
