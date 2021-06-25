@@ -35,6 +35,7 @@ import org.bouncycastle.jcajce.provider.BouncyCastleFipsProvider;
 import org.bouncycastle.jsse.provider.BouncyCastleJsseProvider;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
+import hudson.Functions;
 
 @Restricted(NoExternalUse.class)
 public class BouncyCastleFIPSIntaller {
@@ -77,6 +78,12 @@ public class BouncyCastleFIPSIntaller {
 
             // https://issues.redhat.com/browse/ELY-1622?workflowName=GIT+Pull+Request+workflow+&stepId=4
             Security.setProperty("ssl.KeyManagerFactory.algorithm","X509");
+            if (!Functions.isWindows()) {
+                // we need to use a non blocking random other wise we can be blocked at startup.
+                // slide 14 https://community.broadcom.com/HigherLogic/System/DownloadDocumentFile.ashx?DocumentFileKey=7747b411-2e1e-4bc2-8284-9b8856790ef9
+                // FIPS compliant.
+                Security.setProperty("securerandom.source", "file:/dev/./urandom");
+            }
 
             final BouncyCastleFipsProvider bcFipsProvider = new BouncyCastleFipsProvider();
             //Security.insertProviderAt(bcFipsProvider, 0);
