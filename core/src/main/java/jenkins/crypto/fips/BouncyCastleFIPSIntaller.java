@@ -35,7 +35,6 @@ import org.bouncycastle.jcajce.provider.BouncyCastleFipsProvider;
 import org.bouncycastle.jsse.provider.BouncyCastleJsseProvider;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
-import hudson.Functions;
 
 @Restricted(NoExternalUse.class)
 public class BouncyCastleFIPSIntaller {
@@ -78,12 +77,6 @@ public class BouncyCastleFIPSIntaller {
 
             // https://issues.redhat.com/browse/ELY-1622?workflowName=GIT+Pull+Request+workflow+&stepId=4
             Security.setProperty("ssl.KeyManagerFactory.algorithm","X509");
-            if (!Functions.isWindows()) {
-                // we need to use a non blocking random other wise we can be blocked at startup.
-                // slide 14 https://community.broadcom.com/HigherLogic/System/DownloadDocumentFile.ashx?DocumentFileKey=7747b411-2e1e-4bc2-8284-9b8856790ef9
-                // FIPS compliant.
-                Security.setProperty("securerandom.source", "file:/dev/./urandom");
-            }
 
             final BouncyCastleFipsProvider bcFipsProvider = new BouncyCastleFipsProvider();
             //Security.insertProviderAt(bcFipsProvider, 0);
@@ -91,12 +84,13 @@ public class BouncyCastleFIPSIntaller {
             //Security.insertProviderAt(jseeProvider, 1);
             // We still need the Sun providers as per https://downloads.bouncycastle.org/fips-java/BC-FJA-UserGuide-1.0.2.pdf
             final Provider sunProvider = new sun.security.provider.Sun();
-            
+
             sun.security.jca.ProviderList providers = sun.security.jca.ProviderList.newList(bcFipsProvider, jseeProvider, sunProvider);
             sun.security.jca.Providers.setProviderList(providers);
             // there is no atomic set so we need to add ours then remove the others otherwise some things that should be found won't be :( 
             
             assert KeyManagerFactory.getDefaultAlgorithm().equals("X509") : "incorrect default algorithm: " + KeyManagerFactory.getDefaultAlgorithm();
+
             /*
             final Provider[] providers = Security.getProviders();
             for (Provider p : providers) {
