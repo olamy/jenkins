@@ -98,31 +98,26 @@ THE SOFTWARE.
       <groupId>org.bouncycastle</groupId>
       <artifactId>bc-fips</artifactId>
       <version>1.0.2.1</version>
-      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bctls-fips</artifactId>
       <version>1.0.4</version>
-      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcpg-fips</artifactId>
       <version>1.0.5.1</version>
-      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcmail-fips</artifactId>
       <version>1.0.3</version>
-      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcpkix-fips</artifactId>
       <version>1.0.5</version>
-      <optional>true</optional>
     </dependency>
 
     <dependency>
@@ -794,55 +789,6 @@ THE SOFTWARE.
             </manifest>
           </archive>
         </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>3.2.4</version>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>shade</goal>
-            </goals>
-            <configuration>
-              <!--  to aid debugging -->
-              <createSourcesJar>true</createSourcesJar>
-              <relocations>
-                <relocation>
-                  <pattern>org.bouncycastle.</pattern>
-                  <shadedPattern>jenkins.internal.do.not.use.bouncycastle.</shadedPattern>
-                </relocation>
-              </relocations>
-              <artifactSet>
-                <includes>
-                  <include>org.bouncycastle:*</include>
-                </includes>
-              </artifactSet>
-              <transformers>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.DontIncludeResourceTransformer">
-                  <resources>
-                    <resource>.SF</resource>
-                    <resource>.DSA</resource>
-                    <resource>module-info.class</resource>
-                  </resources>
-                </transformer>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
-              </transformers>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <!--  need to run flatten after shade -->
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>flatten-maven-plugin</artifactId>
-        <executions>
-            <execution>
-            <id>flatten</id>
-            <phase>package</phase>
-          </execution>
-        </executions>
       </plugin>
     </plugins>
   </build>
