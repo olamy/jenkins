@@ -208,6 +208,10 @@ public class ClassFilterImpl extends ClassFilter {
                         } else {
                             LOGGER.log(Level.FINE, "{0} does not look like a Jenkins plugin", loc);
                         }
+                        if ("org.bouncycastle".equals(mf.getMainAttributes().get("Implementation-Vendor-Id"))) {
+                            LOGGER.log(Level.FINE, "{0} appears to be bouncycastle code, OK", loc);
+                            return true;
+                        }
                     } else {
                         LOGGER.log(Level.FINE, "ignoring {0} with no manifest", loc);
                     }
