@@ -49,7 +49,75 @@ def abort = true;
 
 properties([buildDiscarder(logRotator(numToKeepStr: '15', artifactNumToKeepStr: '15'))])
 
-k8sNode('private-core-template-maven3.5.4-non-root') {
+potTemplate(yaml: '''apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    cluster-autoscaler.kubernetes.io/safe-to-evict: false
+spec:
+  automountServiceAccountToken: false
+  containers:
+  - name: dind-daemon
+    image: docker:18.06-dind
+    resources:
+      requests:
+        cpu: 20m
+        memory: 512Mi
+        ephemeral-storage: "2Gi"
+      limits:
+         cpu: "1"
+         memory: "4096Mi"
+         ephemeral-storage: "20Gi"
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - name: docker-graph-storage
+      mountPath: /var/lib/docker
+  - name: haveged
+    image: hortonworks/haveged:1.1.0
+    securityContext:
+      privileged: true
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+  - name: jnlp
+    image: 063356183961.dkr.ecr.us-east-1.amazonaws.com/rosie/ci-ath:maven3.5.4-non-root
+    imagePullPolicy: Always
+    tty: true
+    workingDir: /jenkins
+    command: ["sh"]
+    args: ["/var/jenkins_config/jenkins-agent"]
+    volumeMounts:
+    - name: jenkins-agent
+      mountPath: /var/jenkins_config
+    env:
+    - name: JAVA_TOOL_OPTIONS
+      value: "-Xmx1g"
+    - name: HOME
+      value: /home/user-test
+    - name: DOCKER_HOST
+      value: tcp://127.0.0.1:2375
+    resources:
+      requests:
+        cpu: 100m
+        memory: 6Gi
+        ephemeral-storage: "20Gi"
+      limits:
+        cpu: 2
+        memory: 20Gi
+        ephemeral-storage: "50Gi"
+  volumes:
+  - name: docker-graph-storage
+    emptyDir: {}
+  - name: jenkins-agent
+    configMap:
+      name: jenkins-agent
+''') {
+node(POD_LABEL) {
     try {
         timestamps {
             // First stage is actually checking out the source. Since we're using Multibranch
@@ -191,7 +259,7 @@ k8sNode('private-core-template-maven3.5.4-non-root') {
         }
     }
 }
-
+}
 def getToken(credentialId) {
     def credentials = com.cloudbees.plugins.credentials.CredentialsProvider.lookupCredentials(
         com.cloudbees.plugins.credentials.common.StandardUsernameCredentials.class,
